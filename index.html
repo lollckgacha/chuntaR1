@@ -1491,7 +1491,7 @@
 
         function triggerPitin(r) {
             r.state = 'pitin_slowing';
-            r.stateTimer = 2.0; // 2초간 정지
+            r.stateTimer = 1.5; // 1.5초간 정지
             playSound('beep_high');
             showToast('차량 파손 (VEHICLE DAMAGE)', `${r.member.name} 파손으로 인한 피트인! <br> 잠시 정지합니다.`, 'red');
             emitParticles(r, 0x333333, 20);
