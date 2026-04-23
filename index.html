@@ -1491,7 +1491,7 @@
 
         function triggerPitin(r) {
             r.state = 'pitin_slowing';
-            r.stateTimer = 2.5; // 2초간 정지
+            r.stateTimer = 2.0; // 2초간 정지
             playSound('beep_high');
             showToast('차량 파손 (VEHICLE DAMAGE)', `${r.member.name} 파손으로 인한 피트인! <br> 잠시 정지합니다.`, 'red');
             emitParticles(r, 0x333333, 20);
@@ -1504,6 +1504,15 @@
                 m.position.set((Math.random()-0.5)*2, 0.5, -1.5);
                 r.kart.add(m); r.particles.push({ m, life: Math.random(), isSmoke: colorHex === 0x333333 });
             }
+        }
+
+        function clearParticles(r) {
+            r.particles.forEach(p => {
+                r.kart.remove(p.m);
+                if(p.m.geometry) p.m.geometry.dispose();
+                if(p.m.material) p.m.material.dispose();
+            });
+            r.particles = [];
         }
 
         function updateParticles(r, gameDelta) {
@@ -1630,6 +1639,7 @@
                                 r.state = 'normal';
                                 r.speed = r.baseSpeed * 0.3; // 재출발
                                 r.targetSpdMult = 1.0;
+                                clearParticles(r); // 수리 완료 후 연기 효과 제거
                                 showToast('피트 아웃', `${r.member.name} 수리 완료, 코스 복귀!`, 'mint');
                             }
                         } else {
@@ -1662,13 +1672,18 @@
                                 if (r.stateTimer <= 0) { 
                                     r.state = 'normal'; 
                                     r.targetSpdMult = 1.0; 
+                                    clearParticles(r); // 수리 완료 후 연기 효과 제거
                                     showToast('타이어 교체', `${r.member.name} 원래 속도로 복구!`, 'mint');
                                 }
                             } else if (r.state === 'overtake') {
                                 r.stateTimer -= gameDelta;
                                 r.targetSpdMult = 1.5;
                                 if (Math.random() < 0.2) emitParticles(r, 0xacfef8, 2);
-                                if (r.stateTimer <= 0) { r.state = 'normal'; r.targetSpdMult = 1.0; }
+                                if (r.stateTimer <= 0) { 
+                                    r.state = 'normal'; 
+                                    r.targetSpdMult = 1.0; 
+                                    clearParticles(r); // 오버테이크 종료 후 파티클 제거
+                                }
                             } else {
                                 r.multTimer -= gameDelta;
                                 if(r.multTimer <= 0) {
