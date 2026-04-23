@@ -9,7 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:ital,wght@0,400;0,700;0,900;1,900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
     
     <style>
         /* EA F1 Base Style */
@@ -107,15 +106,15 @@
         #minimapCanvas { width: 100%; height: 100%; display: block; border-radius: 50% !important; }
         .lap-counter-box { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); background: var(--theme-mint); color: var(--ea-dark); padding: 2px 10px; font-size: 1.1rem; font-weight: 900; font-style: italic; z-index: 25; box-shadow: 0 4px 10px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); }
 
-        #eventToastContainer { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); z-index: 50; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; }
-        .ea-toast { display: flex; background: rgba(0, 0, 0, 0.9); border: 1px solid rgba(255,255,255,0.1); transform: skewX(-15deg); animation: slideUpEA 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-        .ea-toast-tag { padding: 8px 16px; font-size: 1.2rem; color: black; }
-        .ea-toast-msg { padding: 8px 24px; color: white; font-size: 1.2rem; }
+        #eventToastContainer { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 50; display: flex; flex-direction: column; align-items: center; gap: 12px; pointer-events: none; }
+        .ea-toast { display: flex; background: rgba(0, 0, 0, 0.9); border: 1px solid rgba(255,255,255,0.1); transform: skewX(-15deg); animation: slideUpEA 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; box-shadow: 0 10px 25px rgba(0,0,0,0.8); }
+        .ea-toast-tag { padding: 12px 24px; font-size: 1.6rem; font-weight: 900; color: black; display: flex; align-items: center; }
+        .ea-toast-msg { padding: 12px 32px; color: white; font-size: 1.6rem; font-weight: 900; display: flex; align-items: center; }
         .ea-toast-inner { display: flex; transform: skewX(15deg); }
-        .toast-yellow { border-bottom: 3px solid #facc15; } .toast-yellow .ea-toast-tag { background: #facc15; }
-        .toast-red { border-bottom: 3px solid #ef4444; } .toast-red .ea-toast-tag { background: #ef4444; color: white; }
-        .toast-green { border-bottom: 3px solid #22c55e; } .toast-green .ea-toast-tag { background: #22c55e; color: white; }
-        .toast-mint { border-bottom: 3px solid var(--theme-mint); } .toast-mint .ea-toast-tag { background: var(--theme-mint); color: var(--ea-dark); }
+        .toast-yellow { border-bottom: 4px solid #facc15; } .toast-yellow .ea-toast-tag { background: #facc15; }
+        .toast-red { border-bottom: 4px solid #ef4444; } .toast-red .ea-toast-tag { background: #ef4444; color: white; }
+        .toast-green { border-bottom: 4px solid #22c55e; } .toast-green .ea-toast-tag { background: #22c55e; color: white; }
+        .toast-mint { border-bottom: 4px solid var(--theme-mint); } .toast-mint .ea-toast-tag { background: var(--theme-mint); color: var(--ea-dark); }
         @keyframes slideUpEA { 0% { opacity: 0; transform: skewX(-15deg) translateY(40px); } 100% { opacity: 1; transform: skewX(-15deg) translateY(0); } }
 
         #centerAlert { position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); z-index: 60; pointer-events: none; }
@@ -168,7 +167,32 @@
     <!-- Intro Video Player -->
     <div id="videoOverlay" class="hidden fixed inset-0 bg-black z-[300]">
         <video id="introVideo" class="w-full h-full object-contain" src="R1.mkv"></video>
-        <button class="absolute top-8 right-8 ea-btn px-6 py-3 z-10 text-xl font-bold" onclick="skipIntroVideo()"><span>SKIP ▶▶</span></button>
+        
+        <!-- Thinner, structured control panel -->
+        <div class="absolute top-6 right-6 z-10 flex items-center gap-4 bg-[rgba(10,10,15,0.8)] border border-[rgba(255,255,255,0.2)] px-3 py-2 shadow-lg backdrop-blur-md">
+            <!-- Volume Control Section -->
+            <div class="flex items-center gap-3">
+                <div class="flex flex-col items-center justify-center text-white ea-font text-[11px] leading-tight">
+                    <span class="text-base mb-1">🔊</span>
+                    <span>영상</span>
+                    <span>볼륨</span>
+                </div>
+                <div class="flex flex-col items-center gap-2 mt-1">
+                    <span id="vidVolText" class="text-[#acfef8] text-xs font-bold w-10 text-center inline-block flex-shrink-0">50%</span>
+                    <input type="range" id="vidVolSlider" min="0" max="100" value="50" class="w-24 cursor-pointer" oninput="updateVideoVolume()">
+                </div>
+            </div>
+
+            <div class="w-px h-10 bg-[rgba(255,255,255,0.2)] mx-1"></div>
+            
+            <!-- Skip Button Section -->
+            <button class="ea-btn ea-btn-primary px-4 py-1 flex-shrink-0" onclick="skipIntroVideo()">
+                <span class="flex flex-col items-center justify-center text-[12px] font-bold">
+                    <span class="text-base leading-none mb-1 mt-0.5">▶▶</span>
+                    <span>스킵</span>
+                </span>
+            </button>
+        </div>
     </div>
 
     <!-- Main Menu -->
@@ -250,16 +274,9 @@
         <div class="ea-panel p-8 w-full max-w-md border border-[rgba(172,254,248,0.3)] shadow-[0_0_30px_rgba(0,0,0,0.8)]">
             <h2 class="text-3xl ea-font-black text-white mb-6">오디오 환경설정</h2>
 
-            <div class="mb-8">
-                <label class="block ea-font text-gray-300 mb-3">엔진 사운드 타입</label>
-                <div class="flex gap-2">
-                    <button id="btnEngineNormal" class="ea-btn ea-btn-primary flex-1 py-2" onclick="setEngineType('normal')"><span>일반 자동차</span></button>
-                    <button id="btnEngineF1" class="ea-btn flex-1 py-2" onclick="setEngineType('f1')"><span>F1 스타일</span></button>
-                </div>
-                <div class="mt-3 flex justify-between">
-                    <button class="ea-btn py-2 px-4 text-sm bg-gray-800" onclick="playIntroFromSettings()"><span>🎬 오프닝 보기</span></button>
-                    <button id="btnPreviewSound" class="ea-btn py-2 px-6 text-sm bg-gray-800" onclick="previewEngineSound()"><span>🔊 사운드 미리듣기</span></button>
-                </div>
+            <div class="mb-8 flex justify-between">
+                <button class="ea-btn py-3 px-6 text-md bg-gray-800" onclick="playIntroFromSettings()"><span>🎬 오프닝 보기</span></button>
+                <button id="btnPreviewSound" class="ea-btn py-3 px-6 text-md bg-gray-800" onclick="previewEngineSound()"><span>🔊 엔진음 미리듣기</span></button>
             </div>
 
             <div class="mb-8">
@@ -309,8 +326,10 @@
 
         <!-- In-game UI Controls -->
         <div id="inGameUI">
-            <button id="muteBtn" onclick="toggleMute()">🔊</button>
-            <button onclick="openSettings()">⚙️</button>
+            <button id="ffwdToggleBtn" onclick="toggleFastForward()" title="배속 토글">▶▶</button>
+            <button id="muteBtn" onclick="toggleMute()" title="음소거">🔊</button>
+            <button onclick="promptAbortRace()" title="메인 메뉴">❌</button>
+            <button onclick="openSettings()" title="설정">⚙️</button>
         </div>
 
         <!-- Alerts -->
@@ -318,11 +337,21 @@
             <p class="alert-text ea-font-black" id="centerAlertText"></p>
         </div>
         <div id="eventToastContainer"></div>
+
+        <!-- Abort Prompt Overlay -->
+        <div id="abortPromptOverlay" class="hidden absolute inset-0 bg-black/80 z-[200] flex items-center justify-center p-4 backdrop-blur-sm">
+            <div class="ea-panel p-8 w-full max-w-md border border-[rgba(172,254,248,0.3)] shadow-[0_0_30px_rgba(0,0,0,0.8)] text-center">
+                <h2 class="text-3xl ea-font-black text-white mb-6">레이스를 중단하시겠습니까?</h2>
+                <div class="flex gap-4 justify-center">
+                    <button class="ea-btn ea-btn-primary px-8 py-3 flex-1 text-xl font-bold" onclick="confirmAbortRace()"><span>예</span></button>
+                    <button class="ea-btn px-8 py-3 flex-1 text-xl font-bold bg-gray-800" onclick="cancelAbortRace()"><span>아니오</span></button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Result Screen (Scrolling Modal) -->
     <div id="resultScreen" class="hidden">
-        <!-- 캡쳐를 위한 래퍼 추가 -->
         <div id="fullCaptureArea" class="w-full max-w-6xl mx-auto ea-panel p-0 flex flex-col bg-[#0a0a0f]">
             <div class="bg-black border-b border-[rgba(255,255,255,0.1)] p-6 lg:p-10 flex justify-between items-center">
                 <div>
@@ -353,7 +382,7 @@
         </div>
 
         <div class="w-full max-w-6xl mx-auto bg-black p-6 flex justify-end gap-4 border-t border-[rgba(255,255,255,0.1)]" data-html2canvas-ignore>
-            <button id="captureBtn" class="ea-btn px-8 py-3 ea-font text-lg"><span>결과 복사</span></button>
+            <button id="captureBtn" class="ea-btn px-8 py-3 ea-font text-lg"><span>결과 텍스트 복사</span></button>
             <button id="replayBtn" class="ea-btn ea-btn-primary px-10 py-3 ea-font text-lg"><span>다시 하기</span></button>
         </div>
     </div>
@@ -386,18 +415,16 @@
 
         // Audio System
         let bgm = null;
+        let engineAudio = null;
         let isMuted = false;
         let bgmVolume = 0.3;
         let sfxVolume = 0.3;
-        let engineType = 'normal'; 
         let isPreviewing = false;
 
         let audioCtx = null;
-        let engineOsc = null;
-        let engineOsc2 = null;
-        let engineGain = null;
 
         let scene, camera, renderer;
+        let maxAnisotropy = 1; // 안티앨리어싱, 계단현상 완화용 필터
         let trackCurve = null;
         let trackLength = 0;
         let runners = [];
@@ -418,7 +445,8 @@
         let cameraTimer = 0;
         let zoomFactor = 1.0;
 
-        let dnfSchedule = [];
+        let eventSchedule = [];
+        let lapPunctureTriggered = []; // 매 랩마다 타이어 펑처 여부 추적
 
         window._camTargetPos = new THREE.Vector3();
         window._camLookAtPos = new THREE.Vector3();
@@ -461,6 +489,13 @@
             createMemberGrid();
             renderPassButtons();
             setupLapButtons();
+            
+            // WebGLRenderer 임시 생성하여 Anisotropy 값 확인
+            const tempCanvas = document.createElement('canvas');
+            const tempRenderer = new THREE.WebGLRenderer({canvas: tempCanvas});
+            maxAnisotropy = tempRenderer.capabilities.getMaxAnisotropy();
+            tempRenderer.dispose();
+
             preloadImages();
 
             document.getElementById('selectAllBtn').onclick = () => {
@@ -472,16 +507,8 @@
             document.getElementById('selectFailedBtn').onclick = () => applyPrev(lastRaceFailedIds);
             ui.startBtn.onclick = startRaceTransition;
             
-            document.getElementById('captureBtn').onclick = captureResults;
+            document.getElementById('captureBtn').onclick = captureResultsText;
             document.getElementById('replayBtn').onclick = returnToMenu;
-
-            const handleFfwdStart = (e) => { if(gameRunning && raceStarted && !raceEnded && !gamePaused && e.target.tagName === 'CANVAS') setFastForward(true); };
-            const handleFfwdEnd = () => { setFastForward(false); };
-            
-            document.addEventListener('mousedown', handleFfwdStart);
-            document.addEventListener('mouseup', handleFfwdEnd);
-            document.addEventListener('touchstart', handleFfwdStart);
-            document.addEventListener('touchend', handleFfwdEnd);
 
             window.addEventListener('wheel', (e) => {
                 if (gameRunning && raceStarted && !gamePaused) {
@@ -497,8 +524,18 @@
             const vidOverlay = document.getElementById('videoOverlay');
             const vid = document.getElementById('introVideo');
             vidOverlay.classList.remove('hidden');
+            
+            updateVideoVolume(); // 재생 시 슬라이더 볼륨 적용
+            
             vid.play().catch(e => { skipIntroVideo(); }); 
             vid.onended = () => { skipIntroVideo(); };
+        }
+
+        function updateVideoVolume() {
+            const vid = document.getElementById('introVideo');
+            const vol = document.getElementById('vidVolSlider').value;
+            vid.volume = vol / 100;
+            document.getElementById('vidVolText').textContent = vol + '%';
         }
 
         function skipIntroPrompt() {
@@ -552,37 +589,71 @@
                 if(bgm) bgm.play().catch(()=>{});
             }
         }
-        function setEngineType(type) {
-            engineType = type;
-            const btnF1 = document.getElementById('btnEngineF1');
-            const btnNormal = document.getElementById('btnEngineNormal');
-            if(type === 'f1') {
-                btnF1.classList.add('ea-btn-primary'); btnNormal.classList.remove('ea-btn-primary');
-            } else {
-                btnF1.classList.remove('ea-btn-primary'); btnNormal.classList.add('ea-btn-primary');
+        
+        // --- Race Abort Management ---
+        function promptAbortRace() {
+            gamePaused = true;
+            document.getElementById('abortPromptOverlay').classList.remove('hidden');
+            stopEngineSound();
+            if(bgm) bgm.pause();
+        }
+
+        function cancelAbortRace() {
+            document.getElementById('abortPromptOverlay').classList.add('hidden');
+            gamePaused = false;
+            lastTime = performance.now(); 
+            if(raceStarted && !raceEnded && !isTransitioningToResult) {
+                startEngineSound();
+                if(bgm) bgm.play().catch(()=>{});
             }
         }
+
+        function confirmAbortRace() {
+            document.getElementById('abortPromptOverlay').classList.add('hidden');
+            setFastForward(false);
+            
+            gameRunning = false;
+            raceEnded = true;
+            isTransitioningToResult = false;
+            gamePaused = false;
+            
+            ui.game.classList.add('hidden');
+            ui.menu.classList.remove('hidden');
+            
+            passCount = null; selectedMembers.clear(); updateSelectionUI();
+        }
+
         function updateSettingsVolume() {
             bgmVolume = document.getElementById('bgmSlider').value / 100;
             sfxVolume = document.getElementById('sfxSlider').value / 100;
             document.getElementById('bgmVolText').textContent = Math.round(bgmVolume * 100) + '%';
             document.getElementById('sfxVolText').textContent = Math.round(sfxVolume * 100) + '%';
             if(bgm) bgm.volume = isMuted ? 0 : bgmVolume;
+            if(engineAudio && !engineAudio.paused) engineAudio.volume = isMuted ? 0 : sfxVolume * 0.7;
         }
         function toggleMute() {
             isMuted = !isMuted;
             document.getElementById('muteBtn').textContent = isMuted ? '🔇' : '🔊';
             if(bgm) bgm.volume = isMuted ? 0 : bgmVolume;
+            if(engineAudio && !engineAudio.paused) engineAudio.volume = isMuted ? 0 : sfxVolume * 0.7;
+        }
+
+        function toggleFastForward() {
+            if (!gameRunning || !raceStarted || raceEnded || gamePaused) return;
+            setFastForward(!isFastForwarding);
         }
 
         function setFastForward(active) {
             isFastForwarding = active;
+            const ffwdBtn = document.getElementById('ffwdToggleBtn');
             if (active) {
                 ui.ffwdIndicator.classList.remove('hidden');
                 if (ui.speedLines) ui.speedLines.classList.add('active');
+                if (ffwdBtn) ffwdBtn.style.color = 'var(--theme-mint)';
             } else {
                 ui.ffwdIndicator.classList.add('hidden');
                 if (ui.speedLines) ui.speedLines.classList.remove('active');
+                if (ffwdBtn) ffwdBtn.style.color = 'white';
             }
             if (bgm) bgm.playbackRate = active ? 1.5 : 1.0;
         }
@@ -595,6 +666,7 @@
             members.forEach(m => {
                 loader.load(m.imgJpg, (tex) => {
                     tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearFilter;
+                    tex.anisotropy = maxAnisotropy; // 안티앨리어싱 필터 적용
                     preloadedTextures[m.id] = tex;
                     loaded++; document.getElementById('loadProgress').textContent = `${loaded}/${members.length}`;
                     if (loaded === members.length) onAllLoaded();
@@ -701,47 +773,18 @@
         function previewEngineSound() {
             if (isPreviewing) return;
             isPreviewing = true;
-            initAudio(); 
             
-            const osc = audioCtx.createOscillator();
-            const osc2 = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
+            const prevAudio = new Audio('engine.mp3'); 
+            prevAudio.volume = sfxVolume * 0.7;
+            try { prevAudio.playbackRate = 1.2; } catch(e){}
+            prevAudio.play().catch(e=>{});
             
-            if (engineType === 'f1') {
-                osc.type = 'sawtooth';
-                osc2.type = 'square';
-            } else {
-                osc.type = 'sawtooth';
-                osc2.type = 'sawtooth';
-            }
-
-            osc.connect(gain);
-            osc2.connect(gain);
-            gain.connect(audioCtx.destination);
-            
-            const now = audioCtx.currentTime;
-            
-            if (engineType === 'f1') {
-                osc.frequency.setValueAtTime(200, now);
-                osc.frequency.linearRampToValueAtTime(600, now + 1.5);
-                osc2.frequency.setValueAtTime(202, now);
-                osc2.frequency.linearRampToValueAtTime(606, now + 1.5);
-                gain.gain.setValueAtTime(sfxVolume * 0.1, now);
-            } else {
-                // 더 낮고 묵직한 베이스 엔진음 피치
-                osc.frequency.setValueAtTime(10, now);
-                osc.frequency.linearRampToValueAtTime(40, now + 1.5);
-                osc2.frequency.setValueAtTime(9.8, now);
-                osc2.frequency.linearRampToValueAtTime(39, now + 1.5);
-                gain.gain.setValueAtTime(sfxVolume * 0.4, now);
-            }
-            
-            gain.gain.linearRampToValueAtTime(0, now + 2.0);
-            
-            osc.start(now); osc2.start(now);
-            osc.stop(now + 2.0); osc2.stop(now + 2.0);
-            
-            setTimeout(() => { isPreviewing = false; }, 2000);
+            setTimeout(() => {
+                const fadeInterval = setInterval(() => {
+                    if (prevAudio.volume > 0.05) prevAudio.volume = Math.max(0, prevAudio.volume - 0.05);
+                    else { prevAudio.pause(); clearInterval(fadeInterval); isPreviewing = false; }
+                }, 50);
+            }, 1500);
         }
 
         function playSound(type) {
@@ -776,58 +819,42 @@
         }
 
         function startEngineSound() {
-            if (isMuted || !audioCtx || raceEnded || isTransitioningToResult) return;
-            engineOsc = audioCtx.createOscillator();
-            engineOsc2 = audioCtx.createOscillator();
-            engineGain = audioCtx.createGain();
-            
-            if (engineType === 'f1') {
-                engineOsc.type = 'sawtooth';
-                engineOsc2.type = 'square';
-            } else {
-                engineOsc.type = 'triangle';
-                engineOsc2.type = 'sawtooth';
+            if (isMuted || raceEnded || isTransitioningToResult) return;
+            if (!engineAudio) {
+                engineAudio = new Audio('engine.mp3');
+                engineAudio.loop = true;
             }
-
-            engineOsc.connect(engineGain);
-            engineOsc2.connect(engineGain);
-            engineGain.connect(audioCtx.destination);
-            
-            engineGain.gain.value = 0;
-            engineOsc.start();
-            engineOsc2.start();
+            engineAudio.volume = sfxVolume * 0.7;
+            engineAudio.playbackRate = 1.0;
+            engineAudio.play().catch(e => console.log('Engine audio play failed:', e));
         }
 
         function updateEngineSound(leaderSpeed) {
             if (isMuted || raceEnded || gamePaused || isTransitioningToResult) { 
-                if(engineGain) engineGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+                if(engineAudio && !engineAudio.paused) engineAudio.pause();
                 return; 
             }
-            if (!engineOsc) startEngineSound();
-            if (engineOsc && engineGain) {
-                let pitch, pitch2;
-                if (engineType === 'f1') {
-                    pitch = 200 + (leaderSpeed || 0) * 4.0;
-                    pitch2 = pitch * 1.01;
-                } else {
-                    pitch = 10 + (leaderSpeed || 0) * 0.6;
-                    pitch2 = pitch * 1.02; 
-                }
-
-                engineOsc.frequency.setTargetAtTime(pitch, audioCtx.currentTime, 0.1);
-                engineOsc2.frequency.setTargetAtTime(pitch2, audioCtx.currentTime, 0.1); 
+            if (!engineAudio || engineAudio.paused) startEngineSound();
+            
+            if (engineAudio) {
+                // 차량 속도에 맞춰 오디오 재생 배속(pitch) 조정
+                let rate = 0.5 + (leaderSpeed || 0) * 0.005;
+                rate = Math.max(0.5, Math.min(2.5, rate));
                 
-                const vol = sfxVolume * (engineType === 'f1' ? 0.1 : 0.4); 
-                engineGain.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.1);
+                try { engineAudio.playbackRate = rate; } catch(e){}
+                engineAudio.volume = sfxVolume * 0.7; 
             }
         }
 
         function stopEngineSound() {
-            if (engineGain) {
-                engineGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.3);
-                setTimeout(() => { 
-                    if(engineOsc) { engineOsc.stop(); engineOsc2.stop(); engineOsc=null; engineOsc2=null; engineGain=null; } 
-                }, 400);
+            if (engineAudio) {
+                const fadeInterval = setInterval(() => {
+                    if (engineAudio.volume > 0.05) engineAudio.volume = Math.max(0, engineAudio.volume - 0.05);
+                    else { 
+                        engineAudio.pause(); 
+                        clearInterval(fadeInterval); 
+                    }
+                }, 50);
             }
         }
 
@@ -862,9 +889,12 @@
             raceStarted = false; raceEnded = false; isTransitioningToResult = false; startingSequence = true; gamePaused = false;
             zoomFactor = 1.0;
             eventFocusTimer = 0; activeEventTargets = [];
+            
+            setFastForward(false); // 시작 시 무조건 배속 해제
+            window._actualTimeScale = 1.0;
             window._smoothLeaderPos = 0; 
             window._prevPackLeader = null; 
-            window._actualTimeScale = 1.0;
+            lapPunctureTriggered = Array(100).fill(false); // 매 랩 펑처 여부 초기화
             
             ui.lbContainer.style.opacity = '0';
             ui.toastContainer.innerHTML = '';
@@ -874,55 +904,29 @@
             playBGM();
             initEngine();
             initMinimap();
-            planDNFs(); 
+            planEvents(); 
         }
 
-        // --- DNF Planning (Survive 1-2 Failers) ---
-        function planDNFs() {
-            dnfSchedule = [];
-            const totalDrivers = selectedMembers.size;
-            const toFailCount = totalDrivers - passCount;
-            if (toFailCount <= 0) return;
-            
-            // 합격 인원 외에 1~2명은 리타이어 없이 끝까지 완주하도록 설정 (순위만 밀림)
-            const survivorsAmongFailers = Math.min(toFailCount, Math.floor(Math.random() * 2) + 1);
-            const targetDnfCount = toFailCount - survivorsAmongFailers;
-            
-            let dnfEvents = [];
-            
-            if (targetDnfCount > 0) {
-                // 전체 탈락자가 3명 이상이고, 실제 DNF 시킬 인원이 2명 이상이면 무조건 동반 탈락(double) 1회 포함
-                if (toFailCount >= 3 && targetDnfCount >= 2) {
-                    dnfEvents.push({ type: 'double' }); // 2명 리타이어
-                    for(let i=0; i < targetDnfCount - 2; i++) {
-                        dnfEvents.push({ type: 'single' });
-                    }
-                } else {
-                    for(let i=0; i < targetDnfCount; i++) {
-                        dnfEvents.push({ type: 'single' });
-                    }
-                }
-            }
-
-            // 타이어 펑크 이벤트는 DNF와 별개로 추가 (70% 확률로 1회 발생, 속도만 줄임)
-            if (Math.random() < 0.7) {
-                dnfEvents.push({ type: 'puncture' });
-            }
-
+        // --- Event Planning (Random Crash & Pit-in) ---
+        function planEvents() {
+            eventSchedule = [];
             const totalDist = trackLength * selectedLaps;
             const minD = totalDist * 0.1;
             const maxD = totalDist * 0.85;
             
-            // 이벤트 순서 무작위 섞기
-            dnfEvents.sort(() => Math.random() - 0.5);
+            // 리타이어 (사고) 확률 약 30%로 1번 발생
+            if (Math.random() < 0.3) {
+                eventSchedule.push({ type: 'crash', pos: minD + Math.random() * (maxD - minD), triggered: false });
+            }
 
-            const interval = (maxD - minD) / Math.max(1, dnfEvents.length);
-            
-            dnfEvents.forEach((evt, i) => {
-                evt.pos = minD + i * interval + (Math.random() * interval * 0.6);
-                evt.triggered = false;
-                dnfSchedule.push(evt);
-            });
+            // 차량 파손 피트인 1~2번 발생
+            const pitCount = Math.floor(Math.random() * 2) + 1;
+            const interval = (maxD - minD) / pitCount;
+            for(let i=0; i<pitCount; i++) {
+                eventSchedule.push({ type: 'pitin', pos: minD + i * interval + (Math.random() * interval * 0.6), triggered: false });
+            }
+
+            eventSchedule.sort((a, b) => a.pos - b.pos);
         }
 
         function initEngine() {
@@ -933,15 +937,17 @@
             scene.background = new THREE.Color(0x87CEEB); 
             scene.fog = new THREE.FogExp2(0x87CEEB, 0.0015);
             
-            camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 4000);
-            renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 3000);
+            
+            // 렌더러 품질 설정 (계단현상 해소)
+            renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setPixelRatio(window.devicePixelRatio); // 디바이스 픽셀 비율 유지
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
             scene.add(new THREE.AmbientLight(0xffffff, 0.85));
-            const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+            const sun = new THREE.DirectionalLight(0xffffff, 0.9); // 1.2 -> 0.9 로 낮춤 (과도한 밝기 방지)
             sun.position.set(100, 300, 50);
             sun.castShadow = true;
             sun.shadow.mapSize.width = 2048; sun.shadow.mapSize.height = 2048;
@@ -1035,7 +1041,8 @@
             geoBack.setAttribute('uv', new THREE.Float32BufferAttribute(uvsBack, 2));
             geoBack.setIndex(indicesBack); geoBack.computeVertexNormals();
 
-            const mat = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.6, side: THREE.FrontSide, color: 0xffffff });
+            // 밝은 하얀색을 살짝 톤 다운시켜 전광판이 눈부시게 타는 현상 방지
+            const mat = new THREE.MeshStandardMaterial({ map: texture, roughness: 1.0, metalness: 0.0, side: THREE.FrontSide, color: 0xdddddd });
             const group = new THREE.Group();
             group.add(new THREE.Mesh(geoFront, mat)); group.add(new THREE.Mesh(geoBack, mat));
             return group;
@@ -1078,38 +1085,21 @@
 
                 let totalW = 0;
                 loadedImgs.forEach(img => { totalW += h * (img.width / img.height); });
-                
-                const dummyW1 = h * 1.5;
-                const dummyW2 = h * 2.5;
-                totalW += dummyW1 + dummyW2;
 
                 canvas.width = totalW;
                 canvas.height = h;
                 let x = 0;
                 
-                // 패턴 1
-                ctx.fillStyle = '#111111'; ctx.fillRect(x, 0, dummyW1, h);
-                ctx.fillStyle = '#facc15'; 
-                ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x+h/2,h/2); ctx.lineTo(x+h,0); ctx.lineTo(x+h,h/4); ctx.lineTo(x+h/2,h*0.75); ctx.lineTo(x,h/4); ctx.fill();
-                x += dummyW1;
-
-                // 배너 이미지 루프
+                // 광고판 이미지들로만 채움
                 loadedImgs.forEach(img => {
                     const w = h * (img.width / img.height);
                     ctx.drawImage(img, x, 0, w, h);
                     x += w;
                 });
 
-                // 패턴 2
-                ctx.fillStyle = '#0f172a'; ctx.fillRect(x, 0, dummyW2, h);
-                ctx.strokeStyle = '#acfef8'; ctx.lineWidth = 10; ctx.strokeRect(x+20, 20, dummyW2-40, h-40);
-                ctx.fillStyle = '#acfef8'; ctx.font = `italic 900 ${h*0.25}px 'Noto Sans KR'`; ctx.textAlign = "center"; ctx.textBaseline="middle"; 
-                ctx.fillText("CHUNTAVERSE", x+dummyW2/2, h*0.4);
-                ctx.fillStyle = '#ffffff'; ctx.font = `italic 700 ${h*0.15}px 'Rajdhani'`;
-                ctx.fillText("GRAND PRIX", x+dummyW2/2, h*0.65);
-
                 const tex = new THREE.CanvasTexture(canvas);
                 tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+                tex.anisotropy = maxAnisotropy; // 안티앨리어싱
                 tex.userData = { aspect: totalW / h }; 
                 callback(tex);
             };
@@ -1118,15 +1108,7 @@
                 const img = new Image(); img.crossOrigin = 'anonymous';
                 img.onload = () => { loadedImgs.push(img); loadedCount++; if(loadedCount===adUrls.length) finalize(); };
                 img.onerror = () => { 
-                    // 로드 실패 시 가상 배너로 대체
-                    const dummyCanvas = document.createElement('canvas'); dummyCanvas.width = 768; dummyCanvas.height = 512; 
-                    const dCtx = dummyCanvas.getContext('2d');
-                    dCtx.fillStyle = '#0f172a'; dCtx.fillRect(0,0,768,512);
-                    dCtx.fillStyle = '#facc15'; dCtx.beginPath(); dCtx.moveTo(0,0); dCtx.lineTo(256,256); dCtx.lineTo(512,0); dCtx.lineTo(512,128); dCtx.lineTo(256,384); dCtx.lineTo(0,128); dCtx.fill();
-                    dCtx.strokeStyle = '#acfef8'; dCtx.lineWidth = 10; dCtx.strokeRect(300, 20, 448, 472);
-                    dCtx.fillStyle = '#acfef8'; dCtx.font = "italic 900 80px 'Noto Sans KR'"; dCtx.textAlign = "center"; dCtx.textBaseline="middle"; dCtx.fillText("CHUNTAVERSE", 524, 256);
-                    const dummyImg = new Image(); dummyImg.src = dummyCanvas.toDataURL();
-                    dummyImg.onload = () => { loadedImgs.push(dummyImg); loadedCount++; if(loadedCount===adUrls.length) finalize(); };
+                    loadedCount++; if(loadedCount===adUrls.length) finalize(); 
                 };
                 img.src = url;
             });
@@ -1179,6 +1161,7 @@
             ctxC.fillStyle = '#ffffff'; ctxC.fillRect(128,0,128,64); 
             const curbTex = new THREE.CanvasTexture(curbCanvas);
             curbTex.wrapS = THREE.RepeatWrapping; curbTex.repeat.set(1, 1500);
+            curbTex.anisotropy = maxAnisotropy;
             const curbMat = new THREE.MeshStandardMaterial({ map: curbTex, roughness: 0.8 });
             
             const curbLeft = new THREE.Mesh(createFloorGeometry(trackCurve, 1500, trackRadius + curbWidth, trackRadius), curbMat);
@@ -1209,6 +1192,7 @@
             cx.fillStyle='#000'; cx.fillRect(0,0,32,32); cx.fillRect(64,0,32,32); cx.fillRect(32,32,32,32); cx.fillRect(96,32,32,32);
             const checkTex = new THREE.CanvasTexture(checkCanvas);
             checkTex.wrapS = THREE.RepeatWrapping; checkTex.wrapT = THREE.RepeatWrapping; checkTex.repeat.set(trackWidth/4, 2);
+            checkTex.anisotropy = maxAnisotropy;
 
             const p0 = trackCurve.getPointAt(0); const t0 = trackCurve.getTangentAt(0);
             const startLine = new THREE.Mesh(new THREE.PlaneGeometry(trackWidth, 4), new THREE.MeshBasicMaterial({ map: checkTex }));
@@ -1284,7 +1268,6 @@
 
                 const tex = preloadedTextures[m.id];
                 const fMat = new THREE.MeshStandardMaterial({ map: tex, color: 0xffffff });
-                // 전후좌우 얼굴 표출 (Right=0, Left=1, Top=2, Bottom=3, Front=4, Back=5)
                 const headMatArray = [fMat, fMat, bMat, dMat, fMat, fMat];
                 const head = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), headMatArray);
                 head.position.set(0, 1.3, -0.2); head.castShadow = true; kart.add(head);
@@ -1295,14 +1278,13 @@
                 cx.fillStyle = m.color; cx.fillRect(0,0,16,128);
                 cx.fillStyle = '#fff'; cx.font = `italic 900 80px 'Noto Sans KR', sans-serif`;
                 cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(m.name, 256, 68);
-                const nameTag = new THREE.Mesh(new THREE.PlaneGeometry(8, 2), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cvs), transparent: true, depthTest: false }));
+                const nameTex = new THREE.CanvasTexture(cvs); nameTex.anisotropy = maxAnisotropy;
+                const nameTag = new THREE.Mesh(new THREE.PlaneGeometry(8, 2), new THREE.MeshBasicMaterial({ map: nameTex, transparent: true, depthTest: false }));
                 nameTag.position.set(0, 4.5, 0); group.add(nameTag);
                 
-                // 카트 전체 크기 2.2배 확대
                 group.scale.setScalar(2.2);
                 scene.add(group);
 
-                // 스피드업 (랩타임 단축으로 속도 1.5배 증가)
                 const targetLapTime = 51;
                 const baseSpd = (trackLength / targetLapTime) * (0.95 + Math.random() * 0.1); 
                 
@@ -1341,7 +1323,6 @@
             
             r.mesh.lookAt(p.clone().add(t));
             
-            // 크래시 스핀 360도 이펙트 (회전)
             if (r.state === 'crashing' || r.state === 'crashed_wall') {
                 r.mesh.rotateY(r.spinAngle || 0);
             }
@@ -1446,7 +1427,6 @@
             const p0 = trackCurve.getPointAt(0);
             const t0 = trackCurve.getTangentAt(0);
             
-            // 카메라를 선수들 뒤 바닥 가까이에 두고 하늘에 있는 신호등을 집중적으로 올려다보게 함
             const startPos = p0.clone().sub(t0.clone().multiplyScalar(40)).add(new THREE.Vector3(0, 5, 0));
             const endPos = p0.clone().sub(t0.clone().multiplyScalar(25)).add(new THREE.Vector3(0, 3, 0)); 
             const gantryTarget = p0.clone().add(new THREE.Vector3(0, 22, 0)); 
@@ -1501,7 +1481,6 @@
             r.state = 'crashing';
             r.crashDirection = Math.random() > 0.5 ? 1 : -1;
             r.spinAngle = 0;
-            // 랩타임 DNF 고정
             r.finishTimeStr = 'DNF';
             r.finishTimeRaw = Infinity;
             playSound('beep_high');
@@ -1510,21 +1489,13 @@
             setEventFocus([r], 3.0);
         }
 
-        function triggerF1DoubleCrash() {
-            const active = runners.filter(r => !r.finished && !r.retired && r.state === 'normal').sort((a,b)=>b.position - a.position);
-            if(active.length < 2) return;
-            
-            let minD = Infinity, r1 = active[0], r2 = active[1];
-            for(let i=0; i<active.length-1; i++) {
-                const d = active[i].position - active[i+1].position;
-                if(d < minD) { minD = d; r1 = active[i]; r2 = active[i+1]; }
-            }
-            
-            r1.retired = true; r1.state = 'crashing'; r1.crashDirection = 1; r1.spinAngle = 0; r1.finishTimeStr = 'DNF'; r1.finishTimeRaw = Infinity;
-            r2.retired = true; r2.state = 'crashing'; r2.crashDirection = -1; r2.spinAngle = 0; r2.finishTimeStr = 'DNF'; r2.finishTimeRaw = Infinity;
-            playSound('crash');
-            showToast('사고발생', `${r1.member.name} & ${r2.member.name} 연쇄 추돌!`, 'red');
-            setEventFocus([r1, r2], 4.0);
+        function triggerPitin(r) {
+            r.state = 'pitin_slowing';
+            r.stateTimer = 2.5; // 2.5초간 정지
+            playSound('beep_high');
+            showToast('차량 파손 (VEHICLE DAMAGE)', `${r.member.name} 파손으로 인한 피트인! 잠시 정지합니다.`, 'red');
+            emitParticles(r, 0x333333, 20);
+            setEventFocus([r], 4.0);
         }
 
         function emitParticles(r, colorHex, count) {
@@ -1635,23 +1606,56 @@
                             updateRunnerTransform(r);
                         }
                     } else if (!r.finished) {
-                        if (r.state === 'puncture') {
-                            r.stateTimer -= gameDelta;
-                            if (r.stateTimer <= 0) { r.state = 'normal'; r.targetSpdMult = 1.0; }
-                        } else {
-                            r.multTimer -= gameDelta;
-                            if(r.multTimer <= 0) {
-                                r.multTimer = 0.5 + Math.random() * 2.0; 
-                                r.targetSpdMult = 0.85 + Math.random() * 0.35; 
+                        if (r.state === 'pitin_slowing') {
+                            r.speed = Math.max(0, r.speed - gameDelta * 60); 
+                            r.laneOffset += (Math.sign(r.laneOffset || 1)) * gameDelta * 15; 
+                            const maxOffset = trackWidth / 2 - 3.0;
+                            if (Math.abs(r.laneOffset) > maxOffset) r.laneOffset = Math.sign(r.laneOffset) * maxOffset;
+                            
+                            r.position += r.speed * gameDelta;
+                            if (r.speed <= 0) {
+                                r.speed = 0;
+                                r.state = 'pitin_stopped';
                             }
+                        } else if (r.state === 'pitin_stopped') {
+                            r.stateTimer -= gameDelta;
+                            if (r.stateTimer <= 0) {
+                                r.state = 'normal';
+                                r.speed = r.baseSpeed * 0.3; // 재출발
+                                showToast('피트 아웃', `${r.member.name} 수리 완료, 코스 복귀!`, 'mint');
+                            }
+                        } else {
+                            // 정상 주행 상태에서의 오버테이크 확률 체크 (초당 약 2% 확률)
+                            if (r.state === 'normal' && Math.random() < 0.02 * gameDelta) {
+                                r.state = 'overtake';
+                                r.stateTimer = 1.0;
+                                showToast('오버테이크', `${r.member.name} 부스트 발동!`, 'mint');
+                                emitParticles(r, 0xacfef8, 10);
+                            }
+
+                            if (r.state === 'puncture') {
+                                r.stateTimer -= gameDelta;
+                                if (r.stateTimer <= 0) { r.state = 'normal'; r.targetSpdMult = 1.0; }
+                            } else if (r.state === 'overtake') {
+                                r.stateTimer -= gameDelta;
+                                r.targetSpdMult = 1.5;
+                                if (Math.random() < 0.2) emitParticles(r, 0xacfef8, 2);
+                                if (r.stateTimer <= 0) { r.state = 'normal'; r.targetSpdMult = 1.0; }
+                            } else {
+                                r.multTimer -= gameDelta;
+                                if(r.multTimer <= 0) {
+                                    r.multTimer = 0.5 + Math.random() * 2.0; 
+                                    r.targetSpdMult = 0.85 + Math.random() * 0.35; 
+                                }
+                            }
+                            
+                            r.currentSpdMult += (r.targetSpdMult - r.currentSpdMult) * gameDelta * 3.0; 
+                            const actualSpeed = r.speed * r.currentSpdMult;
+                            r.position += actualSpeed * gameDelta;
                         }
                         
-                        r.currentSpdMult += (r.targetSpdMult - r.currentSpdMult) * gameDelta * 3.0; 
-                        const actualSpeed = r.speed * r.currentSpdMult;
-                        r.position += actualSpeed * gameDelta;
-                        
                         maxPos = Math.max(maxPos, r.position);
-                        if(r.position === maxPos) leaderSpeed = actualSpeed;
+                        if(r.position === maxPos) leaderSpeed = r.state.includes('pitin') ? r.speed : r.speed * r.currentSpdMult;
 
                         r.lap = Math.floor(Math.max(0, r.position) / trackLength) + 1;
 
@@ -1676,32 +1680,44 @@
                 
                 updateEngineSound(leaderSpeed);
 
-                dnfSchedule.forEach(evt => {
+                const leaderLap = Math.min(selectedLaps, Math.floor(Math.max(0, maxPos) / trackLength) + 1);
+
+                // 매 랩마다 한 명 무작위 타이어 펑처 (초반/후반 아닐 때)
+                if (!lapPunctureTriggered[leaderLap]) {
+                    let lapProgress = (maxPos % trackLength) / trackLength;
+                    if (lapProgress > 0.1 && lapProgress < 0.9) {
+                        lapPunctureTriggered[leaderLap] = true;
+                        const active = runners.filter(r => !r.finished && !r.retired && r.state === 'normal');
+                        if (active.length > 0) {
+                            const r = active[Math.floor(Math.random() * active.length)];
+                            r.state = 'puncture'; r.stateTimer = 4.0; 
+                            r.currentSpdMult = 0.3; r.targetSpdMult = 0.3;
+                            showToast('타이어 펑처 (PUNCTURE)', `${r.member.name} 타이어 파손 - 속도 급감!`, 'yellow');
+                            emitParticles(r, 0xdddddd, 20); 
+                            setEventFocus([r], 3.0);
+                        }
+                    }
+                }
+
+                eventSchedule.forEach(evt => {
                     if (!evt.triggered && maxPos > evt.pos) {
                         evt.triggered = true;
-                        if(evt.type === 'double') {
-                            triggerF1DoubleCrash(); 
-                        } else if (evt.type === 'puncture') {
-                            const active = runners.filter(r => !r.finished && !r.retired && r.state === 'normal');
-                            if (active.length > 0) {
-                                const r = active[Math.floor(Math.random() * active.length)];
-                                r.state = 'puncture'; r.stateTimer = 5.0; 
-                                r.currentSpdMult = 0.3; r.targetSpdMult = 0.3;
-                                showToast('타이어 펑처 (PUNCTURE)', `${r.member.name} 타이어 파손 - 속도 급감!`, 'yellow');
-                                emitParticles(r, 0xdddddd, 20); 
-                                setEventFocus([r], 3.0);
-                            }
-                        } else if (evt.type === 'single') {
+                        if (evt.type === 'crash') {
                             const active = runners.filter(r => !r.finished && !r.retired && r.state === 'normal').sort((a,b)=>a.position - b.position);
                             if (active.length > 0) {
                                 const targetIdx = Math.floor(Math.random() * Math.min(2, active.length)); // 하위권 중 1명
                                 triggerPlannedDNF(active[targetIdx]);
                             }
+                        } else if (evt.type === 'pitin') {
+                            const active = runners.filter(r => !r.finished && !r.retired && r.state === 'normal');
+                            if (active.length > 0) {
+                                const targetIdx = Math.floor(Math.random() * active.length); // 무작위 1명
+                                triggerPitin(active[targetIdx]);
+                            }
                         }
                     }
                 });
 
-                const leaderLap = Math.min(selectedLaps, Math.floor(Math.max(0, maxPos) / trackLength) + 1);
                 ui.lapInfo.textContent = `LAP ${leaderLap}/${selectedLaps}`;
                 ui.minimapLapText.textContent = `L${leaderLap}`;
 
@@ -1883,7 +1899,6 @@
             const sorted = getSorted();
             lastRacePassedIds.clear(); lastRaceFailedIds.clear();
             
-            // 1~6위, 7~12위 2열 분리 배치를 위해 그리드 CSS 직접 적용
             list.className = "grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3";
             list.style.gridAutoFlow = "column";
             list.style.gridTemplateRows = `repeat(${Math.ceil(sorted.length / 2)}, auto)`;
@@ -1911,50 +1926,50 @@
                 `;
                 list.appendChild(div);
             });
-            document.getElementById('captureBtn').querySelector('span').textContent = '결과 복사';
+            document.getElementById('captureBtn').querySelector('span').textContent = '결과 텍스트 복사';
         }
 
-        function captureResults() {
+        // 결과 텍스트 복사 로직으로 교체
+        function captureResultsText() {
             const span = document.getElementById('captureBtn').querySelector('span');
-            span.textContent = '저장 중...';
+            span.textContent = '복사 중...';
+
+            const sorted = getSorted();
+            let textResult = "순위\t드라이버\t기록\t상태\n";
             
-            const listArea = document.getElementById('captureTarget');
-            const originalScrollTop = listArea.scrollTop;
-            listArea.classList.remove('overflow-y-auto', 'flex-1');
-            listArea.style.maxHeight = 'none';
+            sorted.forEach((r, i) => {
+                const rank = r.retired ? 'DNF' : (i + 1);
+                const name = r.member.name;
+                const time = r.finishTimeStr || 'DNF';
+                const isQ = !r.retired && (i + 1) <= passCount;
+                const status = isQ ? '합격' : (r.retired ? '리타이어' : '탈락');
+                
+                textResult += `${rank}\t${name}\t${time}\t${status}\n`;
+            });
+
+            // 텍스트를 클립보드에 복사하기 위해 임시 textarea 생성
+            const textArea = document.createElement("textarea");
+            textArea.value = textResult;
+            document.body.appendChild(textArea);
+            textArea.select();
             
-            const captureWrapper = document.getElementById('fullCaptureArea'); 
+            try {
+                document.execCommand('copy');
+                span.textContent = '텍스트 복사 완료!';
+            } catch (err) {
+                span.textContent = '복사 실패';
+            }
             
-            domtoimage.toBlob(captureWrapper, { bgcolor: '#0a0a0f', style: { transform: 'scale(1)' } })
-                .then(blob => {
-                    listArea.classList.add('overflow-y-auto', 'flex-1');
-                    listArea.style.maxHeight = '';
-                    listArea.scrollTop = originalScrollTop;
-                    
-                    if (navigator.clipboard && navigator.clipboard.write) {
-                        navigator.clipboard.write([new ClipboardItem({'image/png': blob})])
-                            .then(() => span.textContent = '클립보드 저장 완료!')
-                            .catch(() => fallbackDownload(blob, span));
-                    } else {
-                        fallbackDownload(blob, span);
-                    }
-                })
-                .catch(err => {
-                    listArea.classList.add('overflow-y-auto', 'flex-1');
-                    listArea.style.maxHeight = '';
-                    span.textContent = '캡처 실패';
-                });
-        }
-        
-        function fallbackDownload(blob, span) {
-            const a = document.createElement('a'); 
-            a.download = 'R1_Result.png';
-            a.href = URL.createObjectURL(blob); 
-            a.click();
-            span.textContent = '다운로드 됨!';
+            document.body.removeChild(textArea);
+            
+            setTimeout(() => {
+                span.textContent = '결과 텍스트 복사';
+            }, 2500);
         }
 
         function returnToMenu() {
+            setFastForward(false); // 메뉴로 갈 때 배속 강제 해제
+            gameRunning = false; // 이전 레이스의 애니메이션 루프를 확실히 종료하여 속도 중첩 방지
             document.body.style.overflow = 'hidden'; 
             ui.result.classList.add('hidden');
             ui.menu.classList.remove('hidden');
