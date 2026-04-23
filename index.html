@@ -1289,7 +1289,7 @@
                 const baseSpd = (trackLength / targetLapTime) * (0.95 + Math.random() * 0.1); 
                 
                 runners.push({
-                    member: m, mesh: group, kart, nameTag, wheels, laneOffset,
+                    member: m, mesh: group, kart, nameTag, wheels, laneOffset, originalLaneOffset: laneOffset,
                     position: -zOffset, speed: baseSpd, baseSpeed: baseSpd,
                     targetSpdMult: 1.0, currentSpdMult: 1.0, multTimer: 0, 
                     finished: false, retired: false, retired_fully: false, finishTimeStr: null, finishTimeRaw: null,
@@ -1491,7 +1491,7 @@
 
         function triggerPitin(r) {
             r.state = 'pitin_slowing';
-            r.stateTimer = 2.5; // 2.5초에서 2초간 정지로 변경
+            r.stateTimer = 2.5; // 2초간 정지
             playSound('beep_high');
             showToast('차량 파손 (VEHICLE DAMAGE)', `${r.member.name} 파손으로 인한 피트인! <br> 잠시 정지합니다.`, 'red');
             emitParticles(r, 0x333333, 20);
@@ -1570,6 +1570,13 @@
                 let maxPos = 0;
                 let leaderSpeed = 0;
 
+                // 현재 순위 계산 (오버테이크 확률 차등 적용을 위해)
+                let activeRacing = runners.filter(r => !r.retired && !r.finished).sort((a,b) => b.position - a.position);
+                let totalRacing = activeRacing.length;
+                activeRacing.forEach((runner, idx) => {
+                    runner.currentRank = idx + 1;
+                });
+
                 runners.forEach(r => {
                     if (r.retired_fully) return;
 
@@ -1622,11 +1629,28 @@
                             if (r.stateTimer <= 0) {
                                 r.state = 'normal';
                                 r.speed = r.baseSpeed * 0.3; // 재출발
+                                r.targetSpdMult = 1.0;
                                 showToast('피트 아웃', `${r.member.name} 수리 완료, 코스 복귀!`, 'mint');
                             }
                         } else {
-                            // 정상 주행 상태에서의 오버테이크 확률 체크 (초당 약 2% 확률)
-                            if (r.state === 'normal' && Math.random() < 0.02 * gameDelta) {
+                            // 피트인 이후 원래 차선 및 기본 속도(baseSpeed)로 부드럽게 복구
+                            if (r.speed < r.baseSpeed) {
+                                r.speed = Math.min(r.baseSpeed, r.speed + gameDelta * 25);
+                            }
+                            if (r.originalLaneOffset !== undefined && Math.abs(r.laneOffset - r.originalLaneOffset) > 0.1) {
+                                r.laneOffset += Math.sign(r.originalLaneOffset - r.laneOffset) * gameDelta * 10;
+                            }
+
+                            // 정상 주행 상태에서의 오버테이크 확률 체크 (상위권일수록 낮고, 하위권일수록 높게)
+                            let overtakeProb = 0.02;
+                            if (totalRacing > 1 && r.currentRank) {
+                                let rankRatio = (r.currentRank - 1) / (totalRacing - 1);
+                                overtakeProb = 0.005 + rankRatio * 0.045; // 1등 0.5% ~ 꼴등 5%
+                            } else if (totalRacing === 1) {
+                                overtakeProb = 0.005;
+                            }
+
+                            if (r.state === 'normal' && Math.random() < overtakeProb * gameDelta) {
                                 r.state = 'overtake';
                                 r.stateTimer = 1.0;
                                 showToast('오버테이크', `${r.member.name} 부스트 발동!`, 'mint');
@@ -1635,7 +1659,11 @@
 
                             if (r.state === 'puncture') {
                                 r.stateTimer -= gameDelta;
-                                if (r.stateTimer <= 0) { r.state = 'normal'; r.targetSpdMult = 1.0; }
+                                if (r.stateTimer <= 0) { 
+                                    r.state = 'normal'; 
+                                    r.targetSpdMult = 1.0; 
+                                    showToast('타이어 교체', `${r.member.name} 원래 속도로 복구!`, 'mint');
+                                }
                             } else if (r.state === 'overtake') {
                                 r.stateTimer -= gameDelta;
                                 r.targetSpdMult = 1.5;
