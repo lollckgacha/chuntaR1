@@ -1505,7 +1505,7 @@
             r.finishTimeStr = 'DNF';
             r.finishTimeRaw = Infinity;
             playSound('beep_high');
-            showToast('차량 고장 (CRASH)', `${r.member.name} 단독 사고, 스핀아웃!`, 'red');
+            showToast('사고발생', `${r.member.name} 단독 사고, 스핀아웃!`, 'red');
             emitParticles(r, 0x333333, 10);
             setEventFocus([r], 3.0);
         }
@@ -1523,7 +1523,7 @@
             r1.retired = true; r1.state = 'crashing'; r1.crashDirection = 1; r1.spinAngle = 0; r1.finishTimeStr = 'DNF'; r1.finishTimeRaw = Infinity;
             r2.retired = true; r2.state = 'crashing'; r2.crashDirection = -1; r2.spinAngle = 0; r2.finishTimeStr = 'DNF'; r2.finishTimeRaw = Infinity;
             playSound('crash');
-            showToast('차량 충돌 (CRASH)', `${r1.member.name} & ${r2.member.name} 연쇄 추돌!`, 'red');
+            showToast('사고발생', `${r1.member.name} & ${r2.member.name} 연쇄 추돌!`, 'red');
             setEventFocus([r1, r2], 4.0);
         }
 
@@ -1687,7 +1687,7 @@
                                 const r = active[Math.floor(Math.random() * active.length)];
                                 r.state = 'puncture'; r.stateTimer = 5.0; 
                                 r.currentSpdMult = 0.3; r.targetSpdMult = 0.3;
-                                showToast('타이어 펑크 (PUNCTURE)', `${r.member.name} 타이어 파손 - 속도 급감!`, 'yellow');
+                                showToast('타이어 펑처 (PUNCTURE)', `${r.member.name} 타이어 파손 - 속도 급감!`, 'yellow');
                                 emitParticles(r, 0xdddddd, 20); 
                                 setEventFocus([r], 3.0);
                             }
