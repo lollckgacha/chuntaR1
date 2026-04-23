@@ -1491,7 +1491,7 @@
 
         function triggerPitin(r) {
             r.state = 'pitin_slowing';
-            r.stateTimer = 2.5; // 2.5초간 정지
+            r.stateTimer = 2.0; // 2.5초에서 2초간 정지로 변경
             playSound('beep_high');
             showToast('차량 파손 (VEHICLE DAMAGE)', `${r.member.name} 파손으로 인한 피트인! 잠시 정지합니다.`, 'red');
             emitParticles(r, 0x333333, 20);
@@ -1690,7 +1690,7 @@
                         const active = runners.filter(r => !r.finished && !r.retired && r.state === 'normal');
                         if (active.length > 0) {
                             const r = active[Math.floor(Math.random() * active.length)];
-                            r.state = 'puncture'; r.stateTimer = 4.0; 
+                            r.state = 'puncture'; r.stateTimer = 2.0; // 4.0초에서 2초로 변경
                             r.currentSpdMult = 0.3; r.targetSpdMult = 0.3;
                             showToast('타이어 펑처 (PUNCTURE)', `${r.member.name} 타이어 파손 - 속도 급감!`, 'yellow');
                             emitParticles(r, 0xdddddd, 20); 
