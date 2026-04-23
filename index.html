@@ -448,6 +448,9 @@
         let eventSchedule = [];
         let lapPunctureTriggered = []; // 매 랩마다 타이어 펑처 여부 추적
 
+        let lbMode = 'time'; // 'time' 또는 'interval' (앞차와의 차이)
+        let lbTimer = 0;
+
         window._camTargetPos = new THREE.Vector3();
         window._camLookAtPos = new THREE.Vector3();
         window._smoothLeaderPos = 0; 
@@ -890,6 +893,9 @@
             zoomFactor = 1.0;
             eventFocusTimer = 0; activeEventTargets = [];
             
+            lbMode = 'time';
+            lbTimer = 0;
+
             setFastForward(false); // 시작 시 무조건 배속 해제
             window._actualTimeScale = 1.0;
             window._smoothLeaderPos = 0; 
@@ -1491,7 +1497,7 @@
 
         function triggerPitin(r) {
             r.state = 'pitin_slowing';
-            r.stateTimer = 1.5; // 1.5초간 정지
+            r.stateTimer = 2.0; // 2초간 정지
             playSound('beep_high');
             showToast('차량 파손 (VEHICLE DAMAGE)', `${r.member.name} 파손으로 인한 피트인! <br> 잠시 정지합니다.`, 'red');
             emitParticles(r, 0x333333, 20);
@@ -1576,6 +1582,12 @@
                 raceTimer += realDelta; 
                 ui.raceTimerDisplay.textContent = formatTime(raceTimer);
                 
+                lbTimer += realDelta;
+                if (lbTimer > 4.0) {
+                    lbMode = lbMode === 'time' ? 'interval' : 'time';
+                    lbTimer = 0;
+                }
+
                 let maxPos = 0;
                 let leaderSpeed = 0;
 
@@ -1733,7 +1745,7 @@
                         const active = runners.filter(r => !r.finished && !r.retired && r.state === 'normal');
                         if (active.length > 0) {
                             const r = active[Math.floor(Math.random() * active.length)];
-                            r.state = 'puncture'; r.stateTimer = 3.0; // 4.0초에서 2초로 변경
+                            r.state = 'puncture'; r.stateTimer = 2.0; // 3.0초에서 2.0초로 변경
                             r.currentSpdMult = 0.3; r.targetSpdMult = 0.3;
                             showToast('타이어 펑처 (PUNCTURE)', `${r.member.name} 타이어 파손 - 속도 급감!`, 'yellow');
                             emitParticles(r, 0xdddddd, 20); 
@@ -1900,11 +1912,29 @@
                 if(r.retired) { statText = 'DNF'; statClass = 'out'; }
                 else if(r.finished) { statText = '🏁'; statClass = 'finish text-xl'; }
 
+                let displayTime = '';
+                if (r.retired) {
+                    displayTime = '';
+                } else if (r.finished) {
+                    displayTime = r.finishTimeStr; 
+                } else {
+                    if (lbMode === 'interval' && i > 0) {
+                        const prevR = sorted[i-1];
+                        const distGap = Math.max(0, prevR.position - r.position);
+                        // 너무 느린 속도에서 무한대 차이 방지를 위해 최소 기준속도로 계산
+                        const calcSpeed = Math.max(r.speed, r.baseSpeed * 0.5); 
+                        const tGap = distGap / calcSpeed;
+                        displayTime = `<span style="color: var(--theme-mint); font-weight: 700;">+${tGap.toFixed(2)}</span>`;
+                    } else {
+                        displayTime = formatTime(raceTimer);
+                    }
+                }
+
                 div.innerHTML = `
                     <div class="tel-rank ea-font">${r.retired ? 'X' : rank}</div>
                     <div class="tel-color" style="background-color:${r.member.color}"></div>
                     <div class="tel-name ea-font" style="color:${r.retired?'#9ca3af':'white'}">${r.member.name}</div>
-                    <div class="tel-time">${r.finishTimeStr || formatTime(raceTimer)}</div>
+                    <div class="tel-time">${displayTime}</div>
                     <div class="tel-status ea-font ${statClass}">${statText}</div>
                 `;
                 ui.lbList.appendChild(div);
