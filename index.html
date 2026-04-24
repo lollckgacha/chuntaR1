@@ -349,7 +349,7 @@
                 <span class="radio-text">RADIO</span>
             </div>
             <div id="radioLine" class="radio-line"></div>
-            <div id="radioMsg" class="radio-msg">"BOX, BOX, BOX"</div>
+            <div id="radioMsg" class="radio-msg">"BOX, BOX"</div>
         </div>
 
         <!-- Telemetry Tower -->
@@ -679,13 +679,13 @@
             document.getElementById('bgmVolText').textContent = Math.round(bgmVolume * 100) + '%';
             document.getElementById('sfxVolText').textContent = Math.round(sfxVolume * 100) + '%';
             if(bgm) bgm.volume = isMuted ? 0 : bgmVolume;
-            if(engineAudio && !engineAudio.paused) engineAudio.volume = isMuted ? 0 : sfxVolume * 0.7 * 0.75; // 엔진음 75% 깎기
+            if(engineAudio && !engineAudio.paused) engineAudio.volume = isMuted ? 0 : sfxVolume * 0.35; // 엔진음 대폭 감소
         }
         function toggleMute() {
             isMuted = !isMuted;
             document.getElementById('muteBtn').textContent = isMuted ? '🔇' : '🔊';
             if(bgm) bgm.volume = isMuted ? 0 : bgmVolume;
-            if(engineAudio && !engineAudio.paused) engineAudio.volume = isMuted ? 0 : sfxVolume * 0.7 * 0.75;
+            if(engineAudio && !engineAudio.paused) engineAudio.volume = isMuted ? 0 : sfxVolume * 0.35;
         }
 
         function toggleFastForward() {
@@ -855,8 +855,8 @@
         function playBoxRadio(member, reasonMsg = "", isBox = true) {
             if (document.body.classList.contains('radio-none')) return;
             
-            if (!isMuted && isBox) {
-                // 팀 라디오 box.mp3 재생
+            if (!isMuted) {
+                // 팀 라디오 box.mp3 재생 (모든 호출에서 동일하게 사용)
                 const radio = new Audio('box.mp3');
                 radio.volume = sfxVolume;
                 radio.play().catch(()=>{});
@@ -875,7 +875,7 @@
 
             // BOX 여부에 따라 두줄 메시지 또는 단일 사유만 출력
             if (isBox) {
-                msgEl.innerHTML = `"BOX, BOX, BOX"<br><span style="font-size: 0.65em; color: #fff;">${reasonMsg}</span>`;
+                msgEl.innerHTML = `"BOX, BOX"<br><span style="font-size: 0.65em; color: #fff;">${reasonMsg}</span>`;
             } else {
                 msgEl.innerHTML = `"${reasonMsg}"`;
             }
@@ -897,7 +897,7 @@
                 engineAudio = new Audio('engine.mp3');
                 engineAudio.loop = true;
             }
-            engineAudio.volume = sfxVolume * 0.7 * 0.75; // 엔진 소리 75% 감소
+            engineAudio.volume = sfxVolume * 0.35; // 엔진 소리 감소
             engineAudio.playbackRate = 1.0;
             engineAudio.play().catch(e => console.log('Engine audio play failed:', e));
         }
@@ -913,7 +913,7 @@
                 let rate = 0.5 + (leaderSpeed || 0) * 0.005;
                 rate = Math.max(0.5, Math.min(2.5, rate));
                 try { engineAudio.playbackRate = rate; } catch(e){}
-                engineAudio.volume = sfxVolume * 0.7 * 0.75; 
+                engineAudio.volume = sfxVolume * 0.35; 
             }
         }
 
@@ -1541,7 +1541,6 @@
             // 랩타임 DNF 고정
             r.finishTimeStr = 'DNF';
             r.finishTimeRaw = Infinity;
-            playSound('beep_high');
             playBoxRadio(r.member, '단독 스핀 아웃, 리타이어', false);
             emitParticles(r, 0x333333, 10);
             setEventFocus([r], 3.0);
@@ -1550,7 +1549,6 @@
         function triggerPitin(r) {
             r.state = 'pitin_slowing';
             r.stateTimer = 2.0; 
-            playSound('beep_high');
             playBoxRadio(r.member, '차량 파손, 피트인 수리', true);
             emitParticles(r, 0x333333, 20);
             setEventFocus([r], 4.0);
@@ -1670,7 +1668,6 @@
                             if (Math.abs(r.laneOffset) >= maxOffset) {
                                 r.laneOffset = Math.sign(r.laneOffset) * maxOffset;
                                 r.speed = 0; r.state = 'crashed_wall';
-                                playSound('crash'); 
                                 emitParticles(r, 0xffaa00, 40); emitParticles(r, 0x333333, 50); 
                             }
                             updateRunnerTransform(r);
@@ -1823,7 +1820,6 @@
                                 let t1 = dnfTargets[0], t2 = dnfTargets[1];
                                 t1.retired = true; t1.state = 'crashing'; t1.crashDirection = 1; t1.finishTimeStr='DNF'; t1.finishTimeRaw = Infinity;
                                 t2.retired = true; t2.state = 'crashing'; t2.crashDirection = -1; t2.finishTimeStr='DNF'; t2.finishTimeRaw = Infinity;
-                                playSound('crash');
                                 playBoxRadio(t1.member, '선두권 대형 충돌, 리타이어', false);
                                 setEventFocus([t1, t2], 4.0);
                             } else {
@@ -1831,7 +1827,6 @@
                                 let t = dnfTargets[Math.floor(Math.random() * dnfTargets.length)];
                                 t.retired = true; t.state = 'engine_blow'; t.finishTimeStr='DNF'; t.finishTimeRaw = Infinity;
                                 emitParticles(t, 0x333333, 60);
-                                playSound('crash');
                                 playBoxRadio(t.member, '엔진 블로우, 리타이어', false);
                                 setEventFocus([t], 4.0);
                             }
