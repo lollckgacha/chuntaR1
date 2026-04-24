@@ -855,8 +855,8 @@
         function playBoxRadio(member, reasonMsg = "", isBox = true) {
             if (document.body.classList.contains('radio-none')) return;
             
-            if (!isMuted) {
-                // 팀 라디오 box.mp3 재생 (모든 호출에서 동일하게 사용)
+            if (!isMuted && isBox) {
+                // 팀 라디오 box.mp3 재생
                 const radio = new Audio('box.mp3');
                 radio.volume = sfxVolume;
                 radio.play().catch(()=>{});
@@ -1700,7 +1700,6 @@
                             if (r.stateTimer <= 0) {
                                 r.state = 'normal'; r.speed = r.baseSpeed * 0.3; r.targetSpdMult = 1.0;
                                 clearParticles(r); 
-                                playBoxRadio(r.member, '수리 완료, 코스 복귀', false);
                             }
                         } else {
                             if (r.speed < r.baseSpeed) { r.speed = Math.min(r.baseSpeed, r.speed + gameDelta * 25); }
@@ -1758,7 +1757,6 @@
                                 r.stateTimer -= gameDelta;
                                     if (r.stateTimer <= 0) { 
                                         r.state = 'normal'; r.targetSpdMult = 1.0; clearParticles(r); 
-                                        playBoxRadio(r.member, '타이어 교체 완료, 코스 복귀', false);
                                     }
                                 } else if (r.state === 'overtake') {
                                     r.stateTimer -= gameDelta; r.targetSpdMult = 1.5;
