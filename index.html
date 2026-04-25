@@ -316,9 +316,9 @@
 
             <div class="mb-6">
                 <label class="block ea-font text-gray-300 mb-3 flex justify-between">
-                    <span>배경음악 (BGM) 볼륨</span> <span id="bgmVolText" class="text-[#acfef8] font-bold">50%</span>
+                    <span>배경음악 (BGM) 볼륨</span> <span id="bgmVolText" class="text-[#acfef8] font-bold">60%</span>
                 </label>
-                <input type="range" id="bgmSlider" min="0" max="100" value="50" oninput="updateSettingsVolume()">
+                <input type="range" id="bgmSlider" min="0" max="100" value="60" oninput="updateSettingsVolume()">
             </div>
 
             <div class="mb-6">
@@ -380,15 +380,27 @@
         </div>
         <div id="eventToastContainer" class="size-small"></div>
         
-        <!-- NEW: Grid Intro Overlay -->
+        <!-- NEW: Grid Intro Overlay (F1 Style) -->
         <div id="gridIntroOverlay" class="hidden absolute bottom-24 left-10 z-50 flex items-end pointer-events-none">
-            <div id="gridIntroBox" class="bg-[rgba(10,10,15,0.95)] border border-[rgba(255,255,255,0.1)] border-l-8 p-6 pr-16 shadow-[0_10px_30px_rgba(0,0,0,0.8)] transform skew-x-[-15deg] transition-all duration-300 opacity-0 translate-x-[-50px]">
-                <div class="transform skew-x-[15deg]">
-                    <div class="text-gray-400 ea-font text-2xl mb-1 flex items-center gap-2">
-                        <span id="gridIntroColor" class="inline-block w-4 h-4 rotate-45" style="background-color: var(--theme-mint);"></span>
-                        <span id="gridIntroPos">GRID 1</span>
+            <div id="gridIntroBox" class="flex items-stretch h-32 transform -skew-x-[15deg] transition-all duration-300 opacity-0 -translate-x-12">
+                <!-- 좌측 컬러 바 -->
+                <div id="gridIntroColorLine" class="w-3" style="background-color: var(--theme-mint);"></div>
+                
+                <!-- GRID 넘버 영역 -->
+                <div class="bg-[rgba(20,20,25,0.95)] flex flex-col items-center justify-center px-5 border-y border-[rgba(255,255,255,0.1)] relative min-w-[120px]">
+                    <div class="absolute top-2 left-1/2 transform -translate-x-1/2 bg-[rgba(255,255,255,0.1)] px-3 py-0.5">
+                        <span id="gridIntroText" class="font-bold italic text-sm tracking-widest block transform skew-x-[15deg] ea-font" style="color: var(--theme-mint);">GRID</span>
                     </div>
-                    <div class="text-white ea-font-black text-8xl tracking-widest mt-2" id="gridIntroName">NAME</div>
+                    <div class="mt-4 transform skew-x-[15deg]">
+                        <span id="gridIntroPos" class="font-black italic text-6xl leading-none ea-font-black" style="color: var(--theme-mint);">10</span>
+                    </div>
+                </div>
+
+                <!-- 이름 영역 -->
+                <div class="bg-[rgba(10,10,15,0.95)] flex items-center px-10 border border-l-0 border-[rgba(255,255,255,0.1)] shadow-[10px_10px_30px_rgba(0,0,0,0.8)]">
+                    <div class="transform skew-x-[15deg]">
+                        <span id="gridIntroName" class="text-white font-black italic text-7xl tracking-wider ea-font-black">NAME</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -486,7 +498,7 @@
         let gridAudioObj = null; // 그리드 소개 오디오
         let isMuted = false;
         let masterVolume = 1.0; 
-        let bgmVolume = 0.5; 
+        let bgmVolume = 0.6; // 60% 기본값
         let sfxVolume = 0.5; 
         let engineVolume = 0.5; 
         let subtitleSize = 'small';
@@ -669,7 +681,7 @@
                 startEngineSound();
                 if(bgm) bgm.play().catch(()=>{});
             }
-            if(startingSequence && gridAudioObj) gridAudioObj.play().catch(()=>{});
+            // gridAudioObj는 재개하지 않음 (대기 화면 중 설정 창을 열고 닫을 때의 음성 겹침 방지)
         }
         
         function setSubtitleSize(size) {
@@ -702,7 +714,6 @@
                 startEngineSound();
                 if(bgm) bgm.play().catch(()=>{});
             }
-            if(startingSequence && gridAudioObj) gridAudioObj.play().catch(()=>{});
         }
 
         function confirmAbortRace() {
@@ -728,7 +739,7 @@
             
             if(bgm) bgm.volume = isMuted ? 0 : bgmVolume * masterVolume;
             if(engineAudio && !engineAudio.paused) engineAudio.volume = isMuted ? 0 : engineVolume * masterVolume * 0.35;
-            if(gridAudioObj && !gridAudioObj.paused) gridAudioObj.volume = isMuted ? 0 : bgmVolume * masterVolume * 1.2;
+            if(gridAudioObj && !gridAudioObj.paused) gridAudioObj.volume = isMuted ? 0 : bgmVolume * masterVolume * 1.5;
         }
         
         function toggleMute() {
@@ -980,6 +991,7 @@
         function playBGM() {
             if(bgm) { bgm.pause(); bgm.src=''; }
             bgm = new Audio('chuntaverse.mp3');
+            // BGM 기본 볼륨을 조금 더 잘 들리도록 0.6 초기 세팅 적용
             bgm.volume = isMuted ? 0 : bgmVolume * masterVolume;
             bgm.loop = true; 
             bgm.playbackRate = isFastForwarding ? 1.5 : 1.0;
@@ -1503,7 +1515,11 @@
             p.add(n.multiplyScalar(r.laneOffset || 0));
             r.mesh.position.set(p.x, (r.state !== 'crashed_wall' && r.state !== 'towed') ? 0.1 : r.mesh.position.y, p.z);
             
-            r.mesh.lookAt(p.clone().add(t));
+            // 수평 유지 (기울어짐 방지)
+            const lookTarget = p.clone().add(t);
+            lookTarget.y = r.mesh.position.y; 
+            r.mesh.lookAt(lookTarget);
+            
             r.nameTag.lookAt(camera.position);
         }
 
@@ -1609,9 +1625,9 @@
             if(ui.skipIntroBtn) ui.skipIntroBtn.classList.remove('hidden');
 
             if (!isMuted) {
-                if(bgm) bgm.volume = bgmVolume * masterVolume * 0.2; // 그리드 소개 중 BGM 볼륨 감소
+                if(bgm) bgm.volume = isMuted ? 0 : bgmVolume * masterVolume; // 그리드 소개 중 BGM 볼륨 감소 제거 (동일하게 유지)
                 gridAudioObj = new Audio('startinggrid.mp3');
-                gridAudioObj.volume = Math.min(1.0, bgmVolume * masterVolume * 1.2); 
+                gridAudioObj.volume = Math.min(1.0, bgmVolume * masterVolume * 1.5); 
                 gridAudioObj.play().catch(()=>{});
             }
 
@@ -1746,19 +1762,21 @@
                             let r = runners[introIdx];
                             
                             ui.gridIntroOverlay.classList.remove('hidden');
-                            document.getElementById('gridIntroPos').textContent = `GRID ${introIdx + 1}`;
+                            document.getElementById('gridIntroPos').textContent = (introIdx + 1);
+                            document.getElementById('gridIntroPos').style.color = r.member.color;
+                            document.getElementById('gridIntroText').style.color = r.member.color;
                             document.getElementById('gridIntroName').textContent = r.member.name;
-                            document.getElementById('gridIntroBox').style.borderLeftColor = r.member.color;
-                            document.getElementById('gridIntroColor').style.backgroundColor = r.member.color;
+                            document.getElementById('gridIntroColorLine').style.backgroundColor = r.member.color;
                             
                             let box = document.getElementById('gridIntroBox');
                             box.style.opacity = 0;
                             box.style.transform = 'skewX(-15deg) translateX(-50px)';
-                            setTimeout(() => {
-                                if (!gameRunning) return;
-                                box.style.opacity = 1;
-                                box.style.transform = 'skewX(-15deg) translateX(0)';
-                            }, 50);
+                            
+                            // 강제 Reflow 처리 (트랜지션 갱신을 위해)
+                            void box.offsetWidth; 
+                            
+                            box.style.opacity = 1;
+                            box.style.transform = 'skewX(-15deg) translateX(0)';
 
                             let prog = (r.position % trackLength) / trackLength;
                             if (prog < 0) prog += 1;
@@ -1769,7 +1787,7 @@
                             let camSide = Math.sign(r.laneOffset);
                             if (camSide === 0) camSide = 1;
                             
-                            // 카메라를 차량 앞 대각선에 배치하여 멤버의 얼굴과 차량이 잘 보이도록 수정
+                            // 카메라를 차량 앞 대각선에 배치하여 멤버의 얼굴과 차량이 잘 보이도록 설정
                             window._camTargetPos.copy(cp).add(ct.clone().multiplyScalar(15)).add(cn.clone().multiplyScalar(camSide * 7)).add(new THREE.Vector3(0, 3, 0));
                             window._camLookAtPos.copy(cp).add(new THREE.Vector3(0, 1.5, 0));
                             
@@ -1822,7 +1840,6 @@
                         playSound('beep_high');
                         
                         if (!isMuted) {
-                            if(bgm) bgm.volume = isMuted ? 0 : bgmVolume * masterVolume; // BGM 볼륨 원복
                             const gasokSnd = new Audio('gasok.mp3');
                             gasokSnd.volume = Math.min(1.0, sfxVolume * masterVolume * 0.9); 
                             gasokSnd.play().catch(e => console.log('gasok.mp3 play failed:', e));
@@ -1928,7 +1945,13 @@
                             const maxOffset = trackWidth / 2 - 1.0; 
                             if (Math.abs(r.laneOffset) >= maxOffset) {
                                 r.laneOffset = Math.sign(r.laneOffset) * maxOffset;
-                                r.speed = 0; r.state = 'crashed_wall';
+                                r.speed = 0; 
+                                
+                                // 카메라 시점 오류 방지를 위해 벽에 부딪힌 즉시 한방향 뷰로 고정
+                                if (r.state !== 'crashed_wall') {
+                                    r.state = 'crashed_wall';
+                                    window._forceCameraCut = true;
+                                }
                                 emitParticles(r, 0xffaa00, 40); emitParticles(r, 0x333333, 50); 
                             }
                             updateRunnerTransform(r);
@@ -2267,7 +2290,7 @@
                         let camHeight = 25;
                         
                         if (window._currentFocusTarget) {
-                            if (window._currentFocusTarget.state === 'crashing') {
+                            if (window._currentFocusTarget.state === 'crashing' || window._currentFocusTarget.state === 'crashed_wall' || window._currentFocusTarget.retired) {
                                 camSide = -Math.sign(window._currentFocusTarget.crashDirection || 1); 
                             } else if (window._currentFocusTarget.state === 'max_boost') {
                                 camSide = -Math.sign(window._currentFocusTarget.laneOffset || 1);
@@ -2278,6 +2301,7 @@
                             }
                         }
                         
+                        // 반대편 상단에서 내려다보도록 설정해 가려짐 방지
                         tPos.copy(midPos).add(cn.multiplyScalar(camSide * camDist)).add(new THREE.Vector3(0, camHeight, 0)); 
                         lPos.copy(midPos);
                     } else {
@@ -2391,6 +2415,7 @@
                 isTransitioningToResult = true; 
                 setFastForward(false); stopEngineSound(); stopBGM();
                 
+                // 1초 지연 없이 즉시 레이스 루프를 종료하고 결과 화면을 띄움
                 raceEnded = true; 
                 showResultScreen();
             }
