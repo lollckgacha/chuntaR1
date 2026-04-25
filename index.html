@@ -828,7 +828,7 @@
             gain.connect(audioCtx.destination);
             
             const now = audioCtx.currentTime;
-            const targetVol = sfxVolume * 0.75; // 신호등 소리 75%로 감소
+            const targetVol = sfxVolume * 0.375; // 신호등 소리를 기존(0.75) 대비 절반으로 대폭 감소
             
             if (type === 'crash') {
                 osc.type = 'sawtooth';
@@ -858,7 +858,7 @@
             if (!isMuted && isBox) {
                 // 팀 라디오 box.mp3 재생
                 const radio = new Audio('box.mp3');
-                radio.volume = sfxVolume;
+                radio.volume = Math.min(1.0, sfxVolume * 1.25); // 기존 sfxVolume 대비 25% 증가
                 radio.play().catch(()=>{});
             }
             
@@ -1515,7 +1515,7 @@
                     
                     if (!isMuted) {
                         const gasokSnd = new Audio('gasok.mp3');
-                        gasokSnd.volume = sfxVolume * 0.75;
+                        gasokSnd.volume = Math.min(1.0, sfxVolume * 0.9); // 기존 0.75 대비 약 20% 증가
                         gasokSnd.play().catch(e => console.log('gasok.mp3 play failed:', e));
                     }
 
