@@ -134,15 +134,14 @@
         @keyframes popInEA { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
         /* Team Radio Box - F1 Style (우측 중앙 배치) */
-        #teamRadio { position: absolute; top: 50%; right: 40px; background: rgba(15, 15, 20, 0.95); border: 1px solid rgba(255,255,255,0.1); border-left: 6px solid var(--theme-mint); padding: 16px 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.7); z-index: 80; opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none; display: flex; flex-direction: column; min-width: 280px; transform-origin: right center; transform: translate(50px, -50%); }
-        body.radio-small #teamRadio { transform: translate(50px, -50%) scale(0.85); }
-        body.radio-small #teamRadio.active { transform: translate(0, -50%) scale(0.85); }
-        body.radio-medium #teamRadio { transform: translate(50px, -50%) scale(1.0); }
-        body.radio-medium #teamRadio.active { transform: translate(0, -50%) scale(1.0); }
-        body.radio-large #teamRadio { transform: translate(50px, -50%) scale(1.15); }
-        body.radio-large #teamRadio.active { transform: translate(0, -50%) scale(1.15); }
-        body.radio-none #teamRadio { display: none !important; }
-        #teamRadio.active { opacity: 1; }
+        #teamRadioContainer { position: absolute; top: 50%; right: 40px; z-index: 80; pointer-events: none; display: flex; flex-direction: column; gap: 12px; transform: translateY(-50%); transform-origin: right center; transition: transform 0.3s; }
+        body.radio-small #teamRadioContainer { transform: translateY(-50%) scale(0.85); }
+        body.radio-medium #teamRadioContainer { transform: translateY(-50%) scale(1.0); }
+        body.radio-large #teamRadioContainer { transform: translateY(-50%) scale(1.15); }
+        body.radio-none #teamRadioContainer { display: none !important; }
+
+        .team-radio-box { background: rgba(15, 15, 20, 0.95); border: 1px solid rgba(255,255,255,0.1); border-left: 6px solid var(--theme-mint); padding: 16px 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.7); opacity: 0; transform: translateX(50px); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; flex-direction: column; min-width: 280px; }
+        .team-radio-box.active { opacity: 1; transform: translateX(0); }
 
         .radio-header { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 8px; font-family: 'Rajdhani', sans-serif; font-weight: 900; font-style: italic; font-size: 2.2rem; text-transform: uppercase; line-height: 1; }
         .radio-name { color: #00d2ff; }
@@ -341,16 +340,8 @@
             <span class="ffwd-icon">▶▶</span><span class="ea-font-black">FAST FORWARD</span>
         </div>
 
-        <!-- Team Radio UI -->
-        <div id="teamRadio" class="hidden">
-            <div class="radio-header">
-                <span id="radioName" class="radio-name">NAME</span>
-                <span class="radio-icon" style="font-size: 1.5rem; margin: 0 4px; font-style: normal;">📻</span>
-                <span class="radio-text">RADIO</span>
-            </div>
-            <div id="radioLine" class="radio-line"></div>
-            <div id="radioMsg" class="radio-msg">"BOX, BOX"</div>
-        </div>
+        <!-- Team Radio UI Container -->
+        <div id="teamRadioContainer"></div>
 
         <!-- Telemetry Tower -->
         <div class="telemetry-tower" id="leaderboard" style="opacity: 0; transition: opacity 0.5s;">
@@ -529,7 +520,7 @@
             ffwdIndicator: document.getElementById('ffwdIndicator'),
             settingsModal: document.getElementById('settingsModal'),
             speedLines: document.getElementById('speedLines'),
-            teamRadio: document.getElementById('teamRadio')
+            teamRadioContainer: document.getElementById('teamRadioContainer')
         };
 
         function init() {
@@ -642,7 +633,7 @@
             });
             document.getElementById('btnSub' + size.charAt(0).toUpperCase() + size.slice(1)).classList.add('ea-btn-primary');
             
-            if (size !== 'none' && !ui.teamRadio.classList.contains('active')) {
+            if (size !== 'none' && ui.teamRadioContainer.children.length === 0) {
                 playBoxRadio({name: 'SYSTEM', color: '#acfef8'}, '자막 크기 변경됨', false);
             }
         }
@@ -855,39 +846,40 @@
         function playBoxRadio(member, reasonMsg = "", isBox = true) {
             if (document.body.classList.contains('radio-none')) return;
             
-            if (!isMuted && isBox) {
-                // 팀 라디오 box.mp3 재생
+            if (!isMuted) {
+                // 팀 라디오 box.mp3 재생 (다중 호출 시에도 동일하게 적용)
                 const radio = new Audio('box.mp3');
                 radio.volume = Math.min(1.0, sfxVolume * 1.25); // 기존 sfxVolume 대비 25% 증가
                 radio.play().catch(()=>{});
             }
             
-            const tr = ui.teamRadio;
-            const nameEl = document.getElementById('radioName');
-            const lineEl = document.getElementById('radioLine');
-            const msgEl = document.getElementById('radioMsg');
-            
-            // 다이나믹 컬러 및 이름 적용
-            nameEl.textContent = member.name;
-            nameEl.style.color = member.color;
-            lineEl.style.backgroundColor = member.color;
-            tr.style.borderLeftColor = member.color;
+            const container = ui.teamRadioContainer;
+            const box = document.createElement('div');
+            box.className = 'team-radio-box';
+            box.style.borderLeftColor = member.color;
 
             // BOX 여부에 따라 두줄 메시지 또는 단일 사유만 출력
-            if (isBox) {
-                msgEl.innerHTML = `"BOX, BOX"<br><span style="font-size: 0.65em; color: #fff;">${reasonMsg}</span>`;
-            } else {
-                msgEl.innerHTML = `"${reasonMsg}"`;
-            }
-
-            tr.classList.remove('hidden');
-            void tr.offsetWidth; // 강제 리플로우
-            tr.classList.add('active');
+            const msgHtml = isBox ? `"BOX, BOX"<br><span style="font-size: 0.65em; color: #fff;">${reasonMsg}</span>` : `"${reasonMsg}"`;
             
-            if (ui.radioTimeout) clearTimeout(ui.radioTimeout);
-            ui.radioTimeout = setTimeout(() => {
-                tr.classList.remove('active');
-                setTimeout(() => tr.classList.add('hidden'), 400); // 트랜지션 대기
+            box.innerHTML = `
+                <div class="radio-header">
+                    <span class="radio-name" style="color: ${member.color}">${member.name}</span>
+                    <span class="radio-icon" style="font-size: 1.5rem; margin: 0 4px; font-style: normal;">📻</span>
+                    <span class="radio-text">RADIO</span>
+                </div>
+                <div class="radio-line" style="width: 100%; height: 4px; background-color: ${member.color}; margin-bottom: 16px;"></div>
+                <div class="radio-msg">${msgHtml}</div>
+            `;
+            
+            container.appendChild(box);
+
+            // 강제 리플로우 후 애니메이션 적용
+            void box.offsetWidth; 
+            box.classList.add('active');
+            
+            setTimeout(() => {
+                box.classList.remove('active');
+                setTimeout(() => box.remove(), 400); // 트랜지션 대기 후 삭제
             }, 4000);
         }
 
@@ -1819,6 +1811,7 @@
                                 t1.retired = true; t1.state = 'crashing'; t1.crashDirection = 1; t1.finishTimeStr='DNF'; t1.finishTimeRaw = Infinity;
                                 t2.retired = true; t2.state = 'crashing'; t2.crashDirection = -1; t2.finishTimeStr='DNF'; t2.finishTimeRaw = Infinity;
                                 playBoxRadio(t1.member, '선두권 대형 충돌, 리타이어', false);
+                                playBoxRadio(t2.member, '선두권 대형 충돌, 리타이어', false); // 두 번째 드라이버도 호출되도록 추가
                                 setEventFocus([t1, t2], 4.0);
                             } else {
                                 // 1명 엔진 블로우
