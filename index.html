@@ -478,10 +478,11 @@
         // Audio System
         let bgm = null;
         let engineAudio = null;
+        let gridAudioObj = null; // 그리드 소개 오디오
         let isMuted = false;
-        let masterVolume = 1.0; // 전체 마스터 볼륨 추가
-        let bgmVolume = 0.5; // 50% 기본값
-        let sfxVolume = 0.5; // 50% 기본값
+        let masterVolume = 1.0; 
+        let bgmVolume = 0.5; 
+        let sfxVolume = 0.5; 
         let engineVolume = 0.5; 
         let subtitleSize = 'small';
 
@@ -652,6 +653,7 @@
             ui.settingsModal.classList.remove('hidden');
             stopEngineSound();
             if(bgm) bgm.pause();
+            if(gridAudioObj) gridAudioObj.pause();
         }
         function closeSettings() {
             ui.settingsModal.classList.add('hidden');
@@ -661,6 +663,7 @@
                 startEngineSound();
                 if(bgm) bgm.play().catch(()=>{});
             }
+            if(startingSequence && gridAudioObj) gridAudioObj.play().catch(()=>{});
         }
         
         function setSubtitleSize(size) {
@@ -682,6 +685,7 @@
             document.getElementById('abortPromptOverlay').classList.remove('hidden');
             stopEngineSound();
             if(bgm) bgm.pause();
+            if(gridAudioObj) gridAudioObj.pause();
         }
 
         function cancelAbortRace() {
@@ -692,11 +696,13 @@
                 startEngineSound();
                 if(bgm) bgm.play().catch(()=>{});
             }
+            if(startingSequence && gridAudioObj) gridAudioObj.play().catch(()=>{});
         }
 
         function confirmAbortRace() {
             document.getElementById('abortPromptOverlay').classList.add('hidden');
             setFastForward(false);
+            if(gridAudioObj) { gridAudioObj.pause(); gridAudioObj = null; }
             gameRunning = false; raceEnded = true; isTransitioningToResult = false; gamePaused = false;
             ui.game.classList.add('hidden');
             ui.menu.classList.remove('hidden');
@@ -716,6 +722,7 @@
             
             if(bgm) bgm.volume = isMuted ? 0 : bgmVolume * masterVolume;
             if(engineAudio && !engineAudio.paused) engineAudio.volume = isMuted ? 0 : engineVolume * masterVolume * 0.35;
+            if(gridAudioObj && !gridAudioObj.paused) gridAudioObj.volume = isMuted ? 0 : bgmVolume * masterVolume * 1.2;
         }
         
         function toggleMute() {
@@ -995,6 +1002,7 @@
             zoomFactor = 1.0;
             eventFocusTimer = 0; activeEventTargets = [];
 
+            if (gridAudioObj) { gridAudioObj.pause(); gridAudioObj = null; }
             setFastForward(false); 
             window._actualTimeScale = 1.0;
             window._smoothLeaderPos = 0; 
@@ -1248,7 +1256,7 @@
             trackCurve.arcLengthDivisions = 10000; 
             trackLength = trackCurve.getLength(); 
 
-            trackWidth = 63; 
+            trackWidth = 63; // 12인 기준 풀사이즈로 항상 고정
             const trackRadius = trackWidth / 2;
             
             const trackMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9, metalness: 0.1 });
@@ -1327,7 +1335,7 @@
                 window._startLights.push(light);
             }
             
-            // Signboard
+            // --- NEW: Signboard ---
             const signW = trackWidth + 14; 
             const signH = 6;
             const signCanvas = document.createElement('canvas');
@@ -1335,6 +1343,7 @@
             const sCtx = signCanvas.getContext('2d');
             sCtx.fillStyle = '#acfef8'; sCtx.fillRect(0, 0, 2048, 160);
             
+            // 검정색 테두리
             sCtx.lineWidth = 24; 
             sCtx.strokeStyle = '#000000'; 
             sCtx.strokeRect(12, 12, 2048 - 24, 160 - 24);
@@ -1364,6 +1373,7 @@
             signBack.position.copy(signBox.position).add(t0.clone().multiplyScalar(-0.61));
             signBack.lookAt(signBack.position.clone().sub(t0));
             gantryGroup.add(signBack);
+            // -----------------------
 
             gantryGroup.add(col1); gantryGroup.add(col2); gantryGroup.add(beam);
             scene.add(gantryGroup);
@@ -1411,6 +1421,7 @@
                 });
 
                 const tex = preloadedTextures[m.id];
+                // 멤버 이미지가 빛에 의해 하얗게 뜨는 것을 방지하기 위해 MeshBasicMaterial 사용
                 const fMat = new THREE.MeshBasicMaterial({ map: tex, color: 0xffffff });
                 const headMatArray = [fMat, fMat, bMat, dMat, fMat, fMat];
                 const head = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), headMatArray);
@@ -1558,14 +1569,36 @@
         }
 
         function runStartAnimation() {
-            introIdx = runners.length - 1; // 꼴찌부터 1위까지 차례대로 보여주기
-            introTimer = 0;
             lightState = 0;
-            cameraMode = 'intro_sequence';
             startingSequence = true;
             
             ui.lbContainer.style.opacity = '0';
             if(ui.gridIntroOverlay) ui.gridIntroOverlay.classList.add('hidden');
+
+            if (!isMuted) {
+                if(bgm) bgm.volume = bgmVolume * masterVolume * 0.2; // 그리드 소개 중 BGM 볼륨 감소
+                gridAudioObj = new Audio('startinggrid.mp3');
+                gridAudioObj.volume = Math.min(1.0, bgmVolume * masterVolume * 1.2); 
+                gridAudioObj.play().catch(()=>{});
+            }
+
+            const p0 = trackCurve.getPointAt(0);
+            const t0 = trackCurve.getTangentAt(0);
+            const rightDir = new THREE.Vector3(t0.z, 0, -t0.x).normalize();
+
+            // 전경 카메라 뷰: 골라인 앞쪽 대각선 위에서 전체 그리드를 조망
+            window._panoStart = p0.clone().add(t0.clone().multiplyScalar(50)).add(rightDir.clone().multiplyScalar(30)).add(new THREE.Vector3(0, 25, 0));
+            window._panoEnd = p0.clone().add(t0.clone().multiplyScalar(20)).add(rightDir.clone().multiplyScalar(10)).add(new THREE.Vector3(0, 15, 0));
+            
+            // 그리드 중간 지점을 바라봄
+            const midDist = (runners.length / 2) * 14;
+            window._panoTarget = p0.clone().sub(t0.clone().multiplyScalar(midDist));
+
+            camera.position.copy(window._panoStart);
+            camera.lookAt(window._panoTarget);
+
+            cameraMode = 'intro_panorama';
+            introTimer = 0; // 전경 진행 타이머
         }
 
         function emitParticles(r, colorHex, count) {
@@ -1647,7 +1680,21 @@
             }
 
             if (startingSequence) {
-                if (cameraMode === 'intro_sequence') {
+                if (cameraMode === 'intro_panorama') {
+                    introTimer += realDelta;
+                    const panoDuration = 3.5; // 음성 길이에 맞춘 전경 시간 (3.5초)
+                    let prog = Math.min(introTimer / panoDuration, 1.0);
+                    let easeProg = prog < 0.5 ? 2 * prog * prog : -1 + (4 - 2 * prog) * prog;
+                    
+                    camera.position.lerpVectors(window._panoStart, window._panoEnd, easeProg);
+                    camera.lookAt(window._panoTarget);
+                    
+                    if (prog >= 1.0) {
+                        cameraMode = 'intro_sequence';
+                        introIdx = runners.length - 1; // 꼴찌부터 소개 시작
+                        introTimer = 0; // 즉시 다음 시퀀스로
+                    }
+                } else if (cameraMode === 'intro_sequence') {
                     introTimer -= realDelta;
                     if (introTimer <= 0) {
                         if (introIdx < 0) {
@@ -1699,8 +1746,10 @@
                         }
                     }
                     
-                    if (introIdx >= -1 && runners[introIdx + 1]) {
-                        let r = runners[introIdx + 1];
+                    if (introIdx >= -1) {
+                        let targetIdx = introIdx + 1;
+                        if (targetIdx >= runners.length) targetIdx = runners.length - 1; 
+                        let r = runners[targetIdx];
                         let prog = (r.position % trackLength) / trackLength;
                         if (prog < 0) prog += 1;
                         let ct = trackCurve.getTangentAt(prog);
@@ -1738,6 +1787,7 @@
                         playSound('beep_high');
                         
                         if (!isMuted) {
+                            if(bgm) bgm.volume = isMuted ? 0 : bgmVolume * masterVolume; // BGM 볼륨 원복
                             const gasokSnd = new Audio('gasok.mp3');
                             gasokSnd.volume = Math.min(1.0, sfxVolume * masterVolume * 0.9); 
                             gasokSnd.play().catch(e => console.log('gasok.mp3 play failed:', e));
