@@ -295,6 +295,13 @@
                 <button class="ea-btn w-full py-3 px-6 text-md bg-gray-800" onclick="playIntroFromSettings()"><span>🎬 오프닝 보기</span></button>
             </div>
 
+            <div class="mb-6 border-b border-[rgba(255,255,255,0.1)] pb-6">
+                <label class="block ea-font text-gray-300 mb-3 flex justify-between">
+                    <span>마스터 볼륨 (전체)</span> <span id="masterVolText" class="text-[#acfef8] font-bold">100%</span>
+                </label>
+                <input type="range" id="masterSlider" min="0" max="100" value="100" oninput="updateSettingsVolume()">
+            </div>
+
             <div class="mb-6">
                 <label class="block ea-font text-gray-300 mb-3 flex justify-between">
                     <span>팀라디오 자막 표시</span>
@@ -424,8 +431,8 @@
 
     <script>
         const baseUrl = 'https://raw.githubusercontent.com/Cren0p/CRD/refs/heads/main/';
-        // Use imgWebp for UI, imgJpg for 3D Textures (Absolute URLs to prevent 404)
-        const members = [
+        
+        let members = [
             { id: 1, name: '천양', imgWebp: baseUrl + '01.webp', imgJpg: baseUrl + '01.jpg', color: '#43EAF6' },
             { id: 2, name: '마다옴', imgWebp: baseUrl + '02.webp', imgJpg: baseUrl + '02.jpg', color: '#FFF5C3' },
             { id: 3, name: '나나문', imgWebp: baseUrl + '03.webp', imgJpg: baseUrl + '03.jpg', color: '#F4F6FF' },
@@ -440,6 +447,13 @@
             { id: 12, name: '파니', imgWebp: baseUrl + '12.webp', imgJpg: baseUrl + '12.jpg', color: '#9FC5E8' }
         ];
 
+        // 멤버 정렬 로직: 천양(1번)은 항상 최우선, 나머지는 이름의 가나다순 정렬
+        members.sort((a, b) => {
+            if (a.id === 1) return -1;
+            if (b.id === 1) return 1;
+            return a.name.localeCompare(b.name);
+        });
+
         let selectedMembers = new Set();
         let passCount = null;
         let selectedLaps = 1;
@@ -452,9 +466,10 @@
         let bgm = null;
         let engineAudio = null;
         let isMuted = false;
+        let masterVolume = 1.0; // 전체 마스터 볼륨 추가
         let bgmVolume = 0.5; // 50% 기본값
         let sfxVolume = 0.5; // 50% 기본값
-        let engineVolume = 0.5; // 엔진 볼륨 독립
+        let engineVolume = 0.5; 
         let subtitleSize = 'small';
 
         let audioCtx = null;
@@ -671,16 +686,18 @@
         }
 
         function updateSettingsVolume() {
+            masterVolume = document.getElementById('masterSlider').value / 100;
             bgmVolume = document.getElementById('bgmSlider').value / 100;
             sfxVolume = document.getElementById('sfxSlider').value / 100;
             engineVolume = document.getElementById('engineSlider').value / 100;
             
+            document.getElementById('masterVolText').textContent = Math.round(masterVolume * 100) + '%';
             document.getElementById('bgmVolText').textContent = Math.round(bgmVolume * 100) + '%';
             document.getElementById('sfxVolText').textContent = Math.round(sfxVolume * 100) + '%';
             document.getElementById('engineVolText').textContent = Math.round(engineVolume * 100) + '%';
             
-            if(bgm) bgm.volume = isMuted ? 0 : bgmVolume;
-            if(engineAudio && !engineAudio.paused) engineAudio.volume = isMuted ? 0 : engineVolume * 0.35;
+            if(bgm) bgm.volume = isMuted ? 0 : bgmVolume * masterVolume;
+            if(engineAudio && !engineAudio.paused) engineAudio.volume = isMuted ? 0 : engineVolume * masterVolume * 0.35;
         }
         
         function toggleMute() {
@@ -716,7 +733,8 @@
             
             members.forEach(m => {
                 loader.load(m.imgJpg, (tex) => {
-                    tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearFilter;
+                    tex.magFilter = THREE.LinearFilter; 
+                    tex.minFilter = THREE.LinearMipmapLinearFilter; // 이미지 계단현상 방지(Mipmap 적용)
                     tex.anisotropy = maxAnisotropy; 
                     preloadedTextures[m.id] = tex;
                     loaded++; document.getElementById('loadProgress').textContent = `${loaded}/${members.length}`;
@@ -829,13 +847,14 @@
             gain.connect(audioCtx.destination);
             
             const now = audioCtx.currentTime;
-            const targetVol = sfxVolume * 0.375; 
+            // 마스터 볼륨 계수 적용
+            const targetVol = sfxVolume * masterVolume * 0.375; 
             
             if (type === 'crash') {
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(80, now);
                 osc.frequency.exponentialRampToValueAtTime(10, now + 0.4);
-                gain.gain.setValueAtTime(sfxVolume * 1.5, now);
+                gain.gain.setValueAtTime(sfxVolume * masterVolume * 1.5, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
                 osc.start(now); osc.stop(now + 0.4);
             } else if (type === 'beep') {
@@ -857,9 +876,9 @@
             if (document.body.classList.contains('radio-none')) return;
             
             if (!isMuted && isBox) {
-                // 팀 라디오 box.mp3 재생
+                // 팀 라디오 box.mp3 재생 (마스터 볼륨 적용)
                 const radio = new Audio('box.mp3');
-                radio.volume = Math.min(1.0, sfxVolume * 1.25); 
+                radio.volume = Math.min(1.0, sfxVolume * masterVolume * 1.25); 
                 radio.play().catch(()=>{});
             }
             
@@ -897,7 +916,7 @@
                 engineAudio = new Audio('engine.mp3');
                 engineAudio.loop = true;
             }
-            engineAudio.volume = engineVolume * 0.35; 
+            engineAudio.volume = engineVolume * masterVolume * 0.35; 
             engineAudio.playbackRate = 1.0;
             engineAudio.play().catch(e => console.log('Engine audio play failed:', e));
         }
@@ -913,7 +932,7 @@
                 let rate = 0.5 + (leaderSpeed || 0) * 0.005;
                 rate = Math.max(0.3, Math.min(2.5, rate));
                 try { engineAudio.playbackRate = rate; } catch(e){}
-                engineAudio.volume = engineVolume * 0.35; 
+                engineAudio.volume = engineVolume * masterVolume * 0.35; 
             }
         }
 
@@ -932,7 +951,7 @@
         function playBGM() {
             if(bgm) { bgm.pause(); bgm.src=''; }
             bgm = new Audio('chuntaverse.mp3');
-            bgm.volume = isMuted ? 0 : bgmVolume;
+            bgm.volume = isMuted ? 0 : bgmVolume * masterVolume;
             bgm.loop = true; 
             bgm.playbackRate = isFastForwarding ? 1.5 : 1.0;
             bgm.play().catch(() => { document.addEventListener('click', () => bgm.play().catch(()=>{}), {once: true}); });
@@ -994,9 +1013,10 @@
             
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 3000);
             
+            // 계단현상 방지를 위해 픽셀 해상도(디바이스 기준 최대 2.0배) 보정
             renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio); 
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -1117,7 +1137,9 @@
                 'https://stimg.sooplive.com/NORMAL_BBS/3/12240993/170569b6c8053d552.png',
                 'https://stimg.sooplive.com/NORMAL_BBS/3/12240993/712369a41174c1a17.png',
                 'https://stimg.sooplive.com/NORMAL_BBS/3/12240993/7370698efc8fcfaa1.png',
-                'https://stimg.sooplive.co.kr/NORMAL_BBS/9/17851689/1684693598158ec2c.png'
+                'https://stimg.sooplive.co.kr/NORMAL_BBS/9/17851689/1684693598158ec2c.png',
+                'https://stimg.afreecatv.com/NORMAL_BBS/1/26499301/536966d85f4837c3f.png',
+                'https://akaiv.studio/brand/color_logo.png'
             ];
 
             let loadedImgs = [];
@@ -1180,7 +1202,7 @@
         function buildEnvironment() {
             const scale = 2.2;
             
-            // Qiddiya (제공된 이미지) 트랙 레이아웃에 맞춘 좌표 배열
+            // Qiddiya 트랙 레이아웃에 맞춘 좌표 배열
             const points = [
                 new THREE.Vector3(0, 0, 100 * scale),       // Start/Finish (1) - 0.0 지점
                 new THREE.Vector3(0, 0, -200 * scale),      // Straight (1)
@@ -1211,14 +1233,11 @@
                 new THREE.Vector3(0, 0, 400 * scale)               // Approach Start (15 -> 1)
             ];
             
-            // 덜덜거림 방지: 거대한 곡선의 보간 해상도를 10000으로 극대화
             trackCurve = new THREE.CatmullRomCurve3(points, true); 
             trackCurve.arcLengthDivisions = 10000; 
             trackLength = trackCurve.getLength(); 
 
-            const maxCols = Math.ceil(selectedMembers.size / 2);
-            const laneWidth = 8.0; 
-            trackWidth = Math.max(maxCols * laneWidth + 15, 45); 
+            trackWidth = 63; // 12인 기준 풀사이즈로 항상 고정
             const trackRadius = trackWidth / 2;
             
             const trackMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9, metalness: 0.1 });
@@ -1253,7 +1272,6 @@
                 scene.add(wallRight);
             });
 
-            // 거대 맵 대응 지면
             const ground = new THREE.Mesh(new THREE.PlaneGeometry(15000, 15000), new THREE.MeshStandardMaterial({ color: 0x1d5c38, roughness: 1 })); 
             ground.rotation.x = -Math.PI / 2; ground.position.y = -0.5; ground.receiveShadow = true; scene.add(ground);
 
@@ -1277,7 +1295,6 @@
             const colGeo = new THREE.CylinderGeometry(0.5, 0.5, 25);
             const colMat = new THREE.MeshStandardMaterial({color: 0x222222, metalness: 0.8});
             
-            // 골라인 기둥 위치를 트랙 바깥으로 넉넉하게 벌리고 높이는 기존으로 복구
             const col1 = new THREE.Mesh(colGeo, colMat); col1.position.copy(p0).add(rightDir.clone().multiplyScalar(trackWidth/2 + 6)); col1.position.y = 12.5;
             const col2 = new THREE.Mesh(colGeo, colMat); col2.position.copy(p0).add(rightDir.clone().multiplyScalar(-trackWidth/2 - 6)); col2.position.y = 12.5;
             
@@ -1297,6 +1314,47 @@
                 gantryGroup.add(light);
                 window._startLights.push(light);
             }
+            
+            // --- NEW: Signboard ---
+            const signW = trackWidth + 14; 
+            const signH = 6;
+            const signCanvas = document.createElement('canvas');
+            signCanvas.width = 2048; signCanvas.height = 160;
+            const sCtx = signCanvas.getContext('2d');
+            sCtx.fillStyle = '#acfef8'; sCtx.fillRect(0, 0, 2048, 160);
+            
+            // 검정색 테두리
+            sCtx.lineWidth = 24; 
+            sCtx.strokeStyle = '#000000'; 
+            sCtx.strokeRect(12, 12, 2048 - 24, 160 - 24);
+
+            sCtx.fillStyle = '#0a0a0f'; 
+            sCtx.font = "italic 900 100px 'Rajdhani', 'Noto Sans KR', sans-serif";
+            sCtx.textAlign = 'center'; sCtx.textBaseline = 'middle';
+            sCtx.fillText("CHUNTAVERSE GRAND PRIX", 1024, 85);
+
+            const signTex = new THREE.CanvasTexture(signCanvas);
+            signTex.anisotropy = maxAnisotropy;
+            const signFrontMat = new THREE.MeshBasicMaterial({ map: signTex });
+            const signSideMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8 });
+            
+            const signBox = new THREE.Mesh(new THREE.BoxGeometry(signW, signH, 1.2), signSideMat);
+            signBox.position.copy(beam.position);
+            signBox.position.y = 27;
+            signBox.lookAt(signBox.position.clone().add(t0));
+            gantryGroup.add(signBox);
+
+            const signFront = new THREE.Mesh(new THREE.PlaneGeometry(signW, signH), signFrontMat);
+            signFront.position.copy(signBox.position).add(t0.clone().multiplyScalar(0.61));
+            signFront.lookAt(signFront.position.clone().add(t0));
+            gantryGroup.add(signFront);
+
+            const signBack = new THREE.Mesh(new THREE.PlaneGeometry(signW, signH), signFrontMat);
+            signBack.position.copy(signBox.position).add(t0.clone().multiplyScalar(-0.61));
+            signBack.lookAt(signBack.position.clone().sub(t0));
+            gantryGroup.add(signBack);
+            // -----------------------
+
             gantryGroup.add(col1); gantryGroup.add(col2); gantryGroup.add(beam);
             scene.add(gantryGroup);
         }
@@ -1305,14 +1363,15 @@
             const arr = Array.from(selectedMembers).map(id => members.find(m => m.id === id));
             for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
             
-            const maxCols = Math.ceil(arr.length / 2);
+            const isSingleRow = arr.length <= 6;
+            const activeCols = isSingleRow ? arr.length : Math.ceil(arr.length / 2);
             const laneWidth = 8.0;
             const spread = 0.05 / selectedLaps; 
 
             arr.forEach((m, idx) => {
-                const row = idx % 2; 
-                const col = Math.floor(idx / 2);
-                const totalColsInRow = (row === 1 && arr.length % 2 !== 0) ? maxCols - 1 : maxCols;
+                const row = isSingleRow ? 0 : (idx % 2); 
+                const col = isSingleRow ? idx : Math.floor(idx / 2);
+                const totalColsInRow = isSingleRow ? arr.length : ((row === 1 && arr.length % 2 !== 0) ? activeCols - 1 : activeCols);
                 const mid = (totalColsInRow - 1) / 2;
                 
                 const laneOffset = (col - mid) * laneWidth;
@@ -1324,7 +1383,6 @@
 
                 const cColor = new THREE.Color(m.color);
                 
-                // 빛 반사가 없는 램버트 재질 사용
                 const bMat = new THREE.MeshLambertMaterial({ color: cColor });
                 const dMat = new THREE.MeshLambertMaterial({ color: 0x15151e }); 
 
@@ -1345,7 +1403,8 @@
                 });
 
                 const tex = preloadedTextures[m.id];
-                const fMat = new THREE.MeshLambertMaterial({ map: tex, color: 0xffffff });
+                // 멤버 이미지가 빛에 의해 하얗게 뜨는 것을 방지하기 위해 MeshBasicMaterial 사용
+                const fMat = new THREE.MeshBasicMaterial({ map: tex, color: 0xffffff });
                 const headMatArray = [fMat, fMat, bMat, dMat, fMat, fMat];
                 const head = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), headMatArray);
                 head.position.set(0, 1.3, -0.2); head.castShadow = true; kart.add(head);
@@ -1364,7 +1423,6 @@
                 group.scale.setScalar(2.2);
                 scene.add(group);
 
-                // 트랙 길이가 변해도 기존의 시각적 스피드를 고정하기 위해 상수로 적용
                 const baseSpd = 180 * (1.0 - spread/2 + Math.random() * spread); 
                 
                 runners.push({
@@ -1530,7 +1588,7 @@
                     
                     if (!isMuted) {
                         const gasokSnd = new Audio('gasok.mp3');
-                        gasokSnd.volume = Math.min(1.0, sfxVolume * 0.9); 
+                        gasokSnd.volume = Math.min(1.0, sfxVolume * masterVolume * 0.9); 
                         gasokSnd.play().catch(e => console.log('gasok.mp3 play failed:', e));
                     }
 
@@ -1608,10 +1666,10 @@
 
             let rawDelta = (time - lastTime) / 1000;
             if (isNaN(rawDelta) || rawDelta <= 0) rawDelta = 0.016; 
+            
             const realDelta = Math.min(rawDelta, 0.1);
             lastTime = time;
 
-            // 포토 피니시 슬로우 모션 우선 적용 (20% 속도)
             let currentTargetTimeScale = isPhotoFinish ? 0.2 : (isFastForwarding ? 4.0 : 1.0);
             
             if (bgm) bgm.playbackRate = isFastForwarding ? 1.5 : 1.0;
@@ -1645,26 +1703,33 @@
                 let currentLeaderLap = absoluteLeader ? Math.min(selectedLaps, Math.floor(Math.max(0, absoluteLeader.position) / trackLength) + 1) : 1;
                 let currentLapProgress = absoluteLeader ? (Math.max(0, absoluteLeader.position) % trackLength) / trackLength : 0;
 
-                // 코너 충돌 리타이어 이벤트 (긴박함을 위해 마지막 랩 50% 이후 트랙에서 아주 낮은 확률로 발동)
+                // 코너 충돌 리타이어 (인원 방어 로직 추가)
                 if (currentLeaderLap === selectedLaps && currentLapProgress > 0.5 && activeRacing.length >= 2 && Math.random() < 0.01 * gameDelta) {
-                    let crashIdx = Math.floor(Math.random() * (activeRacing.length - 1));
-                    let c1 = activeRacing[crashIdx];
-                    let c2 = activeRacing[crashIdx + 1];
+                    let totalStarters = runners.length;
+                    let allowedRetirements = totalStarters - passCount; // 전체 기준 탈락 허용 수
+                    let currentRetirements = runners.filter(r => r.retired).length;
 
-                    // 서로 가깝고 정상 주행 중일 때
-                    if (c1.state === 'normal' && c2.state === 'normal' && Math.abs(c1.position - c2.position) < 20) {
-                        let prog = (c1.position % trackLength) / trackLength;
-                        let t1 = trackCurve.getTangentAt(prog);
-                        let t2 = trackCurve.getTangentAt(Math.min(1, prog + 0.01));
-                        
-                        // 0.07 라디안 이상 꺾이면 코너로 간주
-                        if (t1.angleTo(t2) > 0.07) {
-                            c1.retired = true; c1.state = 'crashing'; c1.crashDirection = 1; c1.finishTimeStr='DNF'; c1.finishTimeRaw = Infinity;
-                            c2.retired = true; c2.state = 'crashing'; c2.crashDirection = -1; c2.finishTimeStr='DNF'; c2.finishTimeRaw = Infinity;
-                            playBoxRadio(c1.member, '코너 경합 중 대형 충돌, 리타이어!', false);
-                            playBoxRadio(c2.member, '차량 대파, 리타이어!', false);
-                            setEventFocus([c1, c2], 4.0);
-                            playSound('crash'); // 충돌 효과음 추가
+                    // 탈락 여유 인원이 최소 2명 이상 남아있을 때만 다중 리타이어 이벤트 발동
+                    if (currentRetirements + 2 <= allowedRetirements) {
+                        let crashIdx = Math.floor(Math.random() * (activeRacing.length - 1));
+                        let c1 = activeRacing[crashIdx];
+                        let c2 = activeRacing[crashIdx + 1];
+
+                        if (c1.state === 'normal' && c2.state === 'normal' && Math.abs(c1.position - c2.position) < 20) {
+                            let prog = (c1.position % trackLength) / trackLength;
+                            let t1 = trackCurve.getTangentAt(prog);
+                            let t2 = trackCurve.getTangentAt(Math.min(1, prog + 0.01));
+                            
+                            if (t1.angleTo(t2) > 0.07) {
+                                // 같은 벽(외곽 또는 내곽)에 부딪히도록 통일
+                                let crashDir = Math.random() < 0.5 ? 1 : -1;
+                                c1.retired = true; c1.state = 'crashing'; c1.crashDirection = crashDir; c1.finishTimeStr='DNF'; c1.finishTimeRaw = Infinity;
+                                c2.retired = true; c2.state = 'crashing'; c2.crashDirection = crashDir; c2.finishTimeStr='DNF'; c2.finishTimeRaw = Infinity;
+                                playBoxRadio(c1.member, '코너 경합 중 대형 충돌, 리타이어!', false);
+                                playBoxRadio(c2.member, '차량 대파, 리타이어!', false);
+                                setEventFocus([c1, c2], 2.0); // 비추는 시간 2.0초로 단축
+                                playSound('crash'); 
+                            }
                         }
                     }
                 }
@@ -1680,11 +1745,14 @@
                 runners.forEach(r => {
                     if (r.retired_fully) return;
 
-                    // 고무줄 효과
+                    // 고무줄 효과 (Catch-up) - 인원이 적을수록 매우 강하게
                     if (!r.finished && !r.retired && absoluteLeader && r !== absoluteLeader) {
                         let gap = Math.max(0, absoluteLeader.position - r.position);
                         let gapRatio = gap / trackLength;
-                        let catchUpBoost = (gapRatio * (selectedLaps === 1 ? 0.6 : 0.3)) + (r.currentRank * 0.006);
+                        
+                        // 12명일 때 1.0, 2명일 때 6.0 배율
+                        let intensity = Math.max(1.0, 12 / totalRacing); 
+                        let catchUpBoost = (gapRatio * (selectedLaps === 1 ? 1.0 : 0.6) * intensity) + (r.currentRank * 0.01 * intensity);
                         r.catchUpSpeed = r.baseSpeed * catchUpBoost;
                     } else {
                         r.catchUpSpeed = 0;
@@ -1717,8 +1785,9 @@
                     } else if (!r.finished) {
                         if (r.state === 'max_boost') {
                             r.maxBoostTimer -= gameDelta;
-                            r.targetSpdMult = 4.0;
-                            r.catchUpSpeed = r.baseSpeed * 2.0; 
+                            // 속도 배수 4.0 -> 2.0 으로 하향 조정 (무조건 1등 X)
+                            r.targetSpdMult = 2.0;
+                            r.catchUpSpeed = r.baseSpeed * 0.8; 
                             
                             if (Math.random() < 0.4) emitParticles(r, 0xffaa00, 3);
                             
@@ -1739,11 +1808,12 @@
                                 r.targetSpdMult = 1.0;
                             }
                         } else {
-                            // 단순 차선 변경 (이전 로직 복구)
                             if (r.speed < r.baseSpeed) { r.speed = Math.min(r.baseSpeed, r.speed + gameDelta * 25); }
 
+                            let intensity = Math.max(1.0, 12 / totalRacing);
                             let carAhead = null, minG = Infinity;
-                            const reactDist = Math.max(20, r.baseSpeed * 0.5);
+                            // 인원이 적을수록 간격을 더 좁혀서 달리도록 설정
+                            const reactDist = Math.max(12, r.baseSpeed * (0.5 / Math.sqrt(intensity)));
                             for (let o of activeRacing) {
                                 if (o !== r && o.position > r.position && o.position - r.position < reactDist) {
                                     if (o.position - r.position < minG) { minG = o.position - r.position; carAhead = o; }
@@ -1755,7 +1825,7 @@
                             
                             if (carAhead && Math.abs(r.laneOffset - carAhead.laneOffset) < 4) { 
                                 r.targetLane = carAhead.laneOffset + (r.laneOffset >= carAhead.laneOffset ? 8 : -8); 
-                                if (r.speed > carAhead.speed + 5) r.speed = Math.max(carAhead.speed + 5, r.speed - gameDelta * 20); 
+                                if (r.speed > carAhead.speed + 5) r.speed = Math.max(carAhead.speed + 5, r.speed - gameDelta * 20 * intensity); 
                             }
                             
                             if (Math.abs(r.laneOffset - r.targetLane) > 0.1) {
@@ -1776,10 +1846,10 @@
                                     else r.targetSpdMult = 0.8;
                                 }
                             } else {
-                                let overtakeProb = 0.02;
+                                let overtakeProb = 0.02 * intensity; // 적은 인원일수록 더 잦은 추월 시도
                                 if (totalRacing > 1 && r.currentRank) {
                                     let rankRatio = (r.currentRank - 1) / (totalRacing - 1);
-                                    overtakeProb = 0.005 + rankRatio * 0.045; 
+                                    overtakeProb = (0.005 + rankRatio * 0.045) * intensity; 
                                 } else if (totalRacing === 1) {
                                     overtakeProb = 0.005;
                                 }
@@ -1826,7 +1896,6 @@
                         updateRunnerTransform(r);
                     } else {
                         r.position += r.speed * gameDelta;
-                        // 통과 직후 속도를 즉시 떨어뜨리지 않고 서서히 감속되도록 완화
                         r.speed = Math.max(0, r.speed - gameDelta * 5);
                         updateRunnerTransform(r);
                     }
@@ -1842,7 +1911,6 @@
                 const leaderLap = Math.min(selectedLaps, Math.floor(Math.max(0, maxPos) / trackLength) + 1);
                 let lapProgress = (maxPos % trackLength) / trackLength;
 
-                // 마지막 랩 이벤트 (SC, VSC)
                 if (leaderLap === selectedLaps && lapProgress > 0.05 && !lastLapEventTriggered) {
                     lastLapEventTriggered = true;
                     let dice = Math.random();
@@ -1861,28 +1929,26 @@
                     }
                 }
                 
-                // MAX 이벤트 
+                // MAX 이벤트 (확률 50%) - 합격자 수(passCount)에 상관없이 발동하도록 완화
                 if (leaderLap === selectedLaps && lapProgress > 0.80 && !maxEventTriggered) {
                     maxEventTriggered = true;
-                    // 합격 인원이 1명이 아닐 때만 MAX 효과 발동
-                    if (passCount > 1 && activeRacing.length >= 3 && Math.random() < 0.33) {
+                    if (activeRacing.length >= 2 && Math.random() < 0.5) {
                         const lastPlace = activeRacing[activeRacing.length - 1];
                         lastPlace.state = 'max_boost';
-                        lastPlace.maxBoostTimer = 15.0; 
+                        lastPlace.maxBoostTimer = 12.0; 
                         
                         if (!isMuted) {
                             const maxSnd = new Audio('max.mp3');
-                            maxSnd.volume = Math.min(1.0, sfxVolume * 0.6); 
+                            maxSnd.volume = Math.min(1.0, sfxVolume * masterVolume * 0.6); 
                             maxSnd.play().catch(()=>{});
                         }
                         
                         playBoxRadio(lastPlace.member, 'MAX VERSTAPPEN MODE!', false);
                         showCenterAlert('MAX BOOST!', lastPlace.member.color, 2500);
-                        setEventFocus([lastPlace], 6.0); 
+                        setEventFocus([lastPlace], 4.0); 
                     }
                 }
 
-                // 타이어 펑처 감속만 유지
                 if (!lapPunctureTriggered[leaderLap] && lapProgress > lapPunctureTriggerPos[leaderLap]) {
                     lapPunctureTriggered[leaderLap] = true;
                     const candidates = runners.filter(r => !r.finished && !r.retired && r.state === 'normal' && r.currentRank <= Math.ceil(totalRacing / 2));
@@ -1898,7 +1964,6 @@
 
                 ui.lapInfo.textContent = `LAP ${leaderLap}/${selectedLaps}`;
 
-                // 포토 피니시 감지 (선두가 골라인 120미터 앞)
                 if (absoluteLeader && absoluteLeader.lap === selectedLaps && (absoluteLeader.targetDist - absoluteLeader.position) < 120 && !isPhotoFinish) {
                     isPhotoFinish = true;
                     setFastForward(false); 
@@ -1908,7 +1973,6 @@
 
                 if (isPhotoFinish) {
                     photoFinishTimer += realDelta; 
-                    // 모든 주자가 골인하거나 타이머가 초과되면 해제
                     if (photoFinishTimer > 15.0 || finishedRunners.length >= totalRacing) { 
                         isPhotoFinish = false;
                         cameraMode = 'follow';
@@ -1918,7 +1982,7 @@
                 }
 
                 if (isPhotoFinish) {
-                    // 포토 피니시는 고정 카메라 처리
+                    // 고정 카메라 유지
                 } else {
                     if (eventFocusTimer > 0 && activeEventTargets.length > 0) {
                         eventFocusTimer -= realDelta; 
@@ -1957,7 +2021,6 @@
                 let currentPackLeaderPos = window._currentFocusTarget ? window._currentFocusTarget.position : 0;
                 
                 if(isNaN(window._smoothLeaderPos)) window._smoothLeaderPos = 0;
-                // 카메라 이동을 프레임 간격(realDelta)에 맞춰 보간하여 덜덜거림 완전 해결
                 window._smoothLeaderPos += (currentPackLeaderPos - window._smoothLeaderPos) * Math.min(1.0, realDelta * 6.0);
 
                 let cProg = (window._smoothLeaderPos % trackLength) / trackLength; 
@@ -1972,21 +2035,26 @@
                     const cn = new THREE.Vector3(ct.z, 0, -ct.x).normalize();
                     
                     if (isPhotoFinish) {
-                        // 골라인 옆 측면에서 완벽하게 통과 순간을 바라보는 포토 피니시 카메라
                         const cpFin = trackCurve.getPointAt(0); 
                         const ctFin = trackCurve.getTangentAt(0); 
                         const cnFin = new THREE.Vector3(ctFin.z, 0, -ctFin.x).normalize();
                         
-                        // 피니시 라인 기준: 광고판에 가려지지 않도록 높이(Y)를 55로 대폭 올리고 내려다보는 시점으로 변경
                         tPos.copy(cpFin).add(cnFin.clone().multiplyScalar(90)).add(new THREE.Vector3(0, 55, 0)); 
-                        // 바라보는 곳: 피니시 라인 중앙
                         lPos.copy(cpFin); 
                     } else if (cameraMode === 'event') {
                         let cx=0, cy=0, cz=0; activeEventTargets.forEach(t => { cx+=t.mesh.position.x; cy+=t.mesh.position.y; cz+=t.mesh.position.z; });
                         cx/=activeEventTargets.length; cy/=activeEventTargets.length; cz/=activeEventTargets.length;
                         const midPos = new THREE.Vector3(cx,cy,cz);
-                        const camSide = window._currentFocusTarget ? Math.sign(window._currentFocusTarget.laneOffset || 1) : 1;
-                        tPos.copy(midPos).add(cn.multiplyScalar(-camSide * 40)).add(new THREE.Vector3(0, 15, 0)); lPos.copy(midPos);
+                        
+                        // 사고가 난 방향(외곽/내곽)을 파악하여 무조건 반대편에서 비추도록 설정 (광고판 가림 완벽 방지)
+                        let camSide = 1; 
+                        if (window._currentFocusTarget && window._currentFocusTarget.state === 'crashing') {
+                            camSide = -Math.sign(window._currentFocusTarget.crashDirection || 1); 
+                        }
+                        
+                        // 반대편 상단에서 내려다보도록 설정해 가려짐 방지
+                        tPos.copy(midPos).add(cn.multiplyScalar(camSide * 35)).add(new THREE.Vector3(0, 25, 0)); 
+                        lPos.copy(midPos);
                     } else {
                         switch(cameraMode) {
                             case 'overview': tPos.copy(cp).sub(ct.clone().multiplyScalar(70 * zoomFactor)).add(new THREE.Vector3(0, 50 * zoomFactor, 0)); lPos.copy(cp).add(ct.clone().multiplyScalar(10)); break;
@@ -2098,7 +2166,6 @@
                 isTransitioningToResult = true; 
                 setFastForward(false); stopEngineSound(); stopBGM();
                 
-                // 대기 시간 없이 즉시 레이스 루프를 종료하고 결과 창을 띄움
                 raceEnded = true; 
                 showResultScreen();
             }
