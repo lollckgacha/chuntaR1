@@ -19,7 +19,7 @@
             --ea-border: rgba(255, 255, 255, 0.15);
             --ea-cyan: #00d2ff;
         }
-        body { font-family: 'Noto Sans KR', sans-serif; background-color: var(--ea-dark); color: white; margin: 0; padding: 0; }
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: var(--ea-dark); color: white; margin: 0; padding: 0; overflow-x: hidden; }
         .ea-font { font-family: 'Rajdhani', 'Noto Sans KR', sans-serif; font-style: italic; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
         .ea-font-black { font-family: 'Noto Sans KR', sans-serif; font-style: italic; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; }
         * { border-radius: 0 !important; outline: none !important; }
@@ -133,7 +133,7 @@
         .alert-text { font-size: 8rem; color: white; text-shadow: 0px 10px 30px rgba(0,0,0,0.9); margin: 0; line-height: 1; text-align: center; animation: popInEA 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes popInEA { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
-        /* Team Radio Box - F1 Style (우측 중앙 배치) */
+        /* Team Radio Box - 스택형 UI 적용 */
         #teamRadioContainer { position: absolute; top: 50%; right: 40px; z-index: 80; pointer-events: none; display: flex; flex-direction: column; gap: 12px; transform: translateY(-50%); transform-origin: right center; transition: transform 0.3s; }
         body.radio-small #teamRadioContainer { transform: translateY(-50%) scale(0.85); }
         body.radio-medium #teamRadioContainer { transform: translateY(-50%) scale(1.0); }
@@ -319,11 +319,18 @@
                 <input type="range" id="bgmSlider" min="0" max="100" value="50" oninput="updateSettingsVolume()">
             </div>
 
-            <div class="mb-8">
+            <div class="mb-6">
                 <label class="block ea-font text-gray-300 mb-3 flex justify-between">
-                    <span>효과음/엔진 (SFX) 볼륨</span> <span id="sfxVolText" class="text-[#acfef8] font-bold">50%</span>
+                    <span>효과음 (SFX) 볼륨</span> <span id="sfxVolText" class="text-[#acfef8] font-bold">50%</span>
                 </label>
                 <input type="range" id="sfxSlider" min="0" max="100" value="50" oninput="updateSettingsVolume()">
+            </div>
+
+            <div class="mb-8">
+                <label class="block ea-font text-gray-300 mb-3 flex justify-between">
+                    <span>엔진 (ENGINE) 볼륨</span> <span id="engineVolText" class="text-[#acfef8] font-bold">50%</span>
+                </label>
+                <input type="range" id="engineSlider" min="0" max="100" value="50" oninput="updateSettingsVolume()">
             </div>
 
             <button onclick="closeSettings()" class="ea-btn w-full py-4 text-xl ea-font-black"><span>닫기</span></button>
@@ -452,7 +459,7 @@
         let isMuted = false;
         let bgmVolume = 0.5; // 50% 기본값
         let sfxVolume = 0.5; // 50% 기본값
-        let isPreviewing = false;
+        let engineVolume = 0.5; // 엔진 볼륨 독립
         let subtitleSize = 'small';
 
         let audioCtx = null;
@@ -480,11 +487,15 @@
         let zoomFactor = 1.0;
 
         let eventSchedule = [];
-        let lapPunctureTriggered = []; 
-        let lastLapEventTriggered = false; // 마지막랩 이벤트 발동 여부
+        let lapPunctureTriggerPos = []; 
+        let lapPunctureTriggered = [];
+        let lastLapEventTriggered = false; 
         let vscActive = false;
         let vscTimer = 0;
         let isFinishCamera = false;
+        
+        // 추가된 이벤트 플래그
+        let maxEventTriggered = false;
 
         window._camTargetPos = new THREE.Vector3();
         window._camLookAtPos = new THREE.Vector3();
@@ -492,6 +503,7 @@
         window._prevPackLeader = null; 
         window._currentFocusTarget = null; 
         window._actualTimeScale = 1.0;
+        window._forceCameraCut = false;
 
         let eventFocusTimer = 0;
         let activeEventTargets = [];
@@ -667,16 +679,20 @@
         function updateSettingsVolume() {
             bgmVolume = document.getElementById('bgmSlider').value / 100;
             sfxVolume = document.getElementById('sfxSlider').value / 100;
+            engineVolume = document.getElementById('engineSlider').value / 100;
+            
             document.getElementById('bgmVolText').textContent = Math.round(bgmVolume * 100) + '%';
             document.getElementById('sfxVolText').textContent = Math.round(sfxVolume * 100) + '%';
+            document.getElementById('engineVolText').textContent = Math.round(engineVolume * 100) + '%';
+            
             if(bgm) bgm.volume = isMuted ? 0 : bgmVolume;
-            if(engineAudio && !engineAudio.paused) engineAudio.volume = isMuted ? 0 : sfxVolume * 0.35; // 엔진음 대폭 감소
+            if(engineAudio && !engineAudio.paused) engineAudio.volume = isMuted ? 0 : engineVolume * 0.35;
         }
+        
         function toggleMute() {
             isMuted = !isMuted;
             document.getElementById('muteBtn').textContent = isMuted ? '🔇' : '🔊';
-            if(bgm) bgm.volume = isMuted ? 0 : bgmVolume;
-            if(engineAudio && !engineAudio.paused) engineAudio.volume = isMuted ? 0 : sfxVolume * 0.35;
+            updateSettingsVolume();
         }
 
         function toggleFastForward() {
@@ -819,7 +835,7 @@
             gain.connect(audioCtx.destination);
             
             const now = audioCtx.currentTime;
-            const targetVol = sfxVolume * 0.375; // 신호등 소리를 기존(0.75) 대비 절반으로 대폭 감소
+            const targetVol = sfxVolume * 0.375; 
             
             if (type === 'crash') {
                 osc.type = 'sawtooth';
@@ -846,10 +862,10 @@
         function playBoxRadio(member, reasonMsg = "", isBox = true) {
             if (document.body.classList.contains('radio-none')) return;
             
-            if (!isMuted) {
-                // 팀 라디오 box.mp3 재생 (다중 호출 시에도 동일하게 적용)
+            if (!isMuted && isBox) {
+                // 팀 라디오 box.mp3 재생
                 const radio = new Audio('box.mp3');
-                radio.volume = Math.min(1.0, sfxVolume * 1.25); // 기존 sfxVolume 대비 25% 증가
+                radio.volume = Math.min(1.0, sfxVolume * 1.25); 
                 radio.play().catch(()=>{});
             }
             
@@ -858,7 +874,6 @@
             box.className = 'team-radio-box';
             box.style.borderLeftColor = member.color;
 
-            // BOX 여부에 따라 두줄 메시지 또는 단일 사유만 출력
             const msgHtml = isBox ? `"BOX, BOX"<br><span style="font-size: 0.65em; color: #fff;">${reasonMsg}</span>` : `"${reasonMsg}"`;
             
             box.innerHTML = `
@@ -873,13 +888,12 @@
             
             container.appendChild(box);
 
-            // 강제 리플로우 후 애니메이션 적용
             void box.offsetWidth; 
             box.classList.add('active');
             
             setTimeout(() => {
                 box.classList.remove('active');
-                setTimeout(() => box.remove(), 400); // 트랜지션 대기 후 삭제
+                setTimeout(() => box.remove(), 400); 
             }, 4000);
         }
 
@@ -889,7 +903,7 @@
                 engineAudio = new Audio('engine.mp3');
                 engineAudio.loop = true;
             }
-            engineAudio.volume = sfxVolume * 0.35; // 엔진 소리 감소
+            engineAudio.volume = engineVolume * 0.35; 
             engineAudio.playbackRate = 1.0;
             engineAudio.play().catch(e => console.log('Engine audio play failed:', e));
         }
@@ -903,9 +917,9 @@
             
             if (engineAudio) {
                 let rate = 0.5 + (leaderSpeed || 0) * 0.005;
-                rate = Math.max(0.5, Math.min(2.5, rate));
+                rate = Math.max(0.3, Math.min(2.5, rate));
                 try { engineAudio.playbackRate = rate; } catch(e){}
-                engineAudio.volume = sfxVolume * 0.35; 
+                engineAudio.volume = engineVolume * 0.35; 
             }
         }
 
@@ -923,7 +937,7 @@
 
         function playBGM() {
             if(bgm) { bgm.pause(); bgm.src=''; }
-            bgm = new Audio('https://github.com/lollckgacha/chuntaR1/blob/main/chuntaverse.mp3');
+            bgm = new Audio('chuntaverse.mp3');
             bgm.volume = isMuted ? 0 : bgmVolume;
             bgm.loop = true; 
             bgm.playbackRate = isFastForwarding ? 1.5 : 1.0;
@@ -944,6 +958,7 @@
             document.body.style.overflow = 'hidden';
             ui.menu.classList.add('hidden');
             ui.game.classList.remove('hidden');
+            ui.minimapCanvas.parentElement.style.display = 'block';
             if(ui.speedLines) ui.speedLines.classList.remove('active');
             
             runners = []; gameTime = 0; raceTimer = 0;
@@ -956,8 +971,12 @@
             window._smoothLeaderPos = 0; 
             window._prevPackLeader = null; 
             window._currentFocusTarget = null; 
-            lapPunctureTriggered = Array(100).fill(false); 
+            window._forceCameraCut = false;
+            
+            lapPunctureTriggerPos = Array.from({length: 100}, () => 0.1 + Math.random() * 0.7); 
+            lapPunctureTriggered = Array(100).fill(false);
             lastLapEventTriggered = false;
+            maxEventTriggered = false;
             vscActive = false; vscTimer = 0;
             isFinishCamera = false;
             
@@ -1138,7 +1157,8 @@
                 }
 
                 let totalW = 0;
-                loadedImgs.forEach(img => { totalW += h * (img.width / img.height); });
+                const spacerW = h * 1.5; // 스페이서(기본 간판) 너비
+                loadedImgs.forEach(img => { totalW += h * (img.width / img.height) + spacerW; });
 
                 canvas.width = totalW;
                 canvas.height = h;
@@ -1148,6 +1168,21 @@
                     const w = h * (img.width / img.height);
                     ctx.drawImage(img, x, 0, w, h);
                     x += w;
+                    
+                    // 기본 광고판(스페이서) 그리기 (천타버스 그랑프리로 수정)
+                    ctx.fillStyle = '#111';
+                    ctx.fillRect(x, 0, spacerW, h);
+                    
+                    ctx.fillStyle = '#222';
+                    ctx.fillRect(x + 20, 20, spacerW - 40, h - 40);
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.font = "italic 900 60px 'Noto Sans KR', sans-serif";
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText("천타버스 그랑프리", x + spacerW/2, h/2);
+                    
+                    x += spacerW;
                 });
 
                 const tex = new THREE.CanvasTexture(canvas);
@@ -1304,7 +1339,9 @@
                 const body = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.5, 3.2), bMat); body.position.y = 0.5; body.castShadow = true; kart.add(body);
                 const nose = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.3, 1.4), bMat); nose.position.set(0, 0.4, 2.3); nose.castShadow = true; kart.add(nose);
                 const fWing = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.1, 0.5), dMat); fWing.position.set(0, 0.3, 2.8); fWing.castShadow = true; kart.add(fWing);
+                
                 const rWing = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.1, 0.7), dMat); rWing.position.set(0, 1.2, -1.4); rWing.castShadow = true; kart.add(rWing);
+                
                 const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.2), dMat); pillar.position.set(0, 0.8, -1.4); kart.add(pillar);
 
                 const wGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.3, 16);
@@ -1341,10 +1378,10 @@
                 const baseSpd = (trackLength / targetLapTime) * (1.0 - spread/2 + Math.random() * spread); 
                 
                 runners.push({
-                    member: m, mesh: group, kart, nameTag, wheels, laneOffset, originalLaneOffset: laneOffset, targetLane: laneOffset,
+                    member: m, mesh: group, kart, nameTag, rWing, wheels, laneOffset, originalLaneOffset: laneOffset, targetLane: laneOffset,
                     position: -zOffset, speed: baseSpd, baseSpeed: baseSpd, catchUpSpeed: 0,
                     targetSpdMult: 1.0, currentSpdMult: 1.0, multTimer: 0, overtakeCooldown: 0,
-                    finished: false, retired: false, retired_fully: false, finishTimeStr: null, finishTimeRaw: null,
+                    finished: false, retired: false, retired_fully: false, finishTimeStr: null, finishTimeRaw: null, maxBoostTimer: 0,
                     lap: 1, targetDist: trackLength * selectedLaps, currentRank: 1,
                     state: 'normal', stateTimer: 0, crashDirection: 1, spinAngle: 0, towedProgress: 0, particles: []
                 });
@@ -1610,8 +1647,19 @@
             lastTime = time;
 
             let currentTargetTimeScale = isFastForwarding ? 4.0 : 1.0;
+            
+            if (bgm) bgm.playbackRate = isFastForwarding ? 1.5 : 1.0;
+
             window._actualTimeScale += (currentTargetTimeScale - window._actualTimeScale) * 0.1;
             const gameDelta = realDelta * window._actualTimeScale;
+
+            // 강제 카메라 컷 전환 플래그 확인 (Lerp 생략)
+            if (window._forceCameraCut) {
+                forceCameraCut = true;
+                window._forceCameraCut = false;
+            } else {
+                forceCameraCut = false;
+            }
 
             if (raceStarted && !raceEnded) {
                 gameTime += gameDelta;
@@ -1625,7 +1673,7 @@
                 activeRacing.forEach((runner, idx) => { runner.currentRank = idx + 1; });
 
                 let absoluteLeader = activeRacing[0]; 
-                
+
                 if (vscActive) {
                     vscTimer -= gameDelta;
                     if (vscTimer <= 0) {
@@ -1642,9 +1690,8 @@
                         let gap = Math.max(0, absoluteLeader.position - r.position);
                         let gapRatio = gap / trackLength;
                         
-                        // 거리가 멀어질수록 기하급수적으로 부스트가 붙도록 수정 
-                        // (가까울 땐 티 안 나게 아주 살짝만, 크게 뒤쳐졌을 때만 합류를 위해 강력하게 작용)
-                        let catchUpBoost = Math.pow(gapRatio, 1.5) * (selectedLaps === 1 ? 0.4 : 0.25) + (r.currentRank * 0.002);
+                        // 거리에 비례하여 선형적으로 부스트를 더 크게 주며, 후순위일수록 주는 기본 보너스도 상향
+                        let catchUpBoost = (gapRatio * (selectedLaps === 1 ? 0.6 : 0.3)) + (r.currentRank * 0.006);
                         r.catchUpSpeed = r.baseSpeed * catchUpBoost;
                     } else {
                         r.catchUpSpeed = 0;
@@ -1680,7 +1727,26 @@
                             updateRunnerTransform(r);
                         }
                     } else if (!r.finished) {
-                        if (r.state === 'pitin_slowing' || r.state === 'sc_pitin') {
+                        if (r.state === 'max_boost') {
+                            // MAX Verstappen 모드!
+                            r.maxBoostTimer -= gameDelta;
+                            r.targetSpdMult = 4.0; // 엄청난 속도
+                            r.catchUpSpeed = r.baseSpeed * 2.0; 
+                            
+                            // 불꽃 파티클 효과
+                            if (Math.random() < 0.4) emitParticles(r, 0xffaa00, 3);
+                            
+                            // 선두권(1~2위) 도달 시 오버슈팅 방지를 위해 속도 살짝 정상화
+                            if (r.currentRank <= 2) {
+                                r.targetSpdMult = 1.2;
+                                r.catchUpSpeed = 0;
+                            }
+                            
+                            if (r.maxBoostTimer <= 0) {
+                                r.state = 'normal';
+                                r.targetSpdMult = 1.0;
+                            }
+                        } else if (r.state === 'pitin_slowing' || r.state === 'sc_pitin') {
                             r.speed = Math.max(0, r.speed - gameDelta * 60); 
                             r.laneOffset += (Math.sign(r.laneOffset || 1)) * gameDelta * 15; 
                             const maxOffset = trackWidth / 2 - 3.0;
@@ -1730,23 +1796,23 @@
                                     else r.targetSpdMult = 0.8;
                                 }
                             } else {
-                            // 정상 주행 상태에서의 오버테이크 확률 체크 (상위권일수록 낮고, 하위권일수록 높게)
-                            let overtakeProb = 0.02;
-                            if (totalRacing > 1 && r.currentRank) {
-                                let rankRatio = (r.currentRank - 1) / (totalRacing - 1);
-                                overtakeProb = 0.005 + rankRatio * 0.045; // 1등 0.5% ~ 꼴등 5%
-                            } else if (totalRacing === 1) {
-                                overtakeProb = 0.005;
-                            }
-
-                            if (r.state === 'normal' && Math.random() < overtakeProb * gameDelta) {
-                                r.state = 'overtake';
-                                r.stateTimer = 1.0;
-                                emitParticles(r, 0xacfef8, 10);
-                            }
-
-                            if (r.state === 'puncture') {
-                                r.stateTimer -= gameDelta;
+                                // 정상 주행 상태에서의 오버테이크 확률 체크 (상위권일수록 낮고, 하위권일수록 높게)
+                                let overtakeProb = 0.02;
+                                if (totalRacing > 1 && r.currentRank) {
+                                    let rankRatio = (r.currentRank - 1) / (totalRacing - 1);
+                                    overtakeProb = 0.005 + rankRatio * 0.045; // 1등 0.5% ~ 꼴등 5%
+                                } else if (totalRacing === 1) {
+                                    overtakeProb = 0.005;
+                                }
+    
+                                if (r.state === 'normal' && Math.random() < overtakeProb * gameDelta) {
+                                    r.state = 'overtake';
+                                    r.stateTimer = 1.0;
+                                    emitParticles(r, 0xacfef8, 10);
+                                }
+    
+                                if (r.state === 'puncture') {
+                                    r.stateTimer -= gameDelta;
                                     if (r.stateTimer <= 0) { 
                                         r.state = 'normal'; r.targetSpdMult = 1.0; clearParticles(r); 
                                     }
@@ -1762,11 +1828,11 @@
                                     }
                                 }
                             }
-                            
-                            r.currentSpdMult += (r.targetSpdMult - r.currentSpdMult) * gameDelta * 3.0; 
-                            const actualSpeed = r.speed * r.currentSpdMult + r.catchUpSpeed;
-                            r.position += actualSpeed * gameDelta;
                         }
+                        
+                        r.currentSpdMult += (r.targetSpdMult - r.currentSpdMult) * gameDelta * 3.0; 
+                        const actualSpeed = r.speed * r.currentSpdMult + r.catchUpSpeed;
+                        r.position += actualSpeed * gameDelta;
                         
                         maxPos = Math.max(maxPos, r.position);
                         if(r.position === maxPos) leaderSpeed = r.state.includes('pitin') ? r.speed : r.speed * r.currentSpdMult;
@@ -1777,6 +1843,7 @@
                             r.finished = true; 
                             r.finishTimeRaw = raceTimer; r.finishTimeStr = formatTime(raceTimer); 
                             r.speed = r.baseSpeed * 0.5; 
+                            r.state = 'normal';
                         }
                         updateRunnerTransform(r);
                     } else {
@@ -1796,7 +1863,7 @@
                 const leaderLap = Math.min(selectedLaps, Math.floor(Math.max(0, maxPos) / trackLength) + 1);
                 let lapProgress = (maxPos % trackLength) / trackLength;
 
-                // 마지막 랩 이벤트 (DNF, SC, VSC)
+                // 마지막 랩 이벤트 (DNF, SC, VSC, MAX Boost)
                 if (leaderLap === selectedLaps && lapProgress > 0.05 && !lastLapEventTriggered) {
                     lastLapEventTriggered = true;
                     let dice = Math.random();
@@ -1824,7 +1891,7 @@
                         }
                     } 
                     // 2. SC (5% 확률)
-                    else if (dice < 0.38 && activeRacing.length > 2) {
+                    else if (selectedLaps > 1 && dice < 0.38 && activeRacing.length > 2) {
                         playBoxRadio({name: 'RACE CONTROL', color: '#facc15'}, '세이프티 카 발동, 전원 감속', false);
                         for(let i=0; i<activeRacing.length - 1; i++) {
                             let t = activeRacing[i];
@@ -1833,20 +1900,42 @@
                         setEventFocus(activeRacing.slice(0, 2), 5.0);
                     }
                     // 3. VSC (5% 확률)
-                    else if (dice < 0.43) {
+                    else if (selectedLaps > 1 && dice < 0.43) {
                         playBoxRadio({name: 'RACE CONTROL', color: '#facc15'}, '버추얼 세이프티 카 발동', false);
                         vscActive = true; vscTimer = 10.0;
                     }
                 }
+                
+                // MAX 이벤트 (80% 이상 진행 시 33% 확률로 꼴찌 급가속)
+                if (leaderLap === selectedLaps && lapProgress > 0.80 && !maxEventTriggered) {
+                    maxEventTriggered = true;
+                    if (activeRacing.length >= 3 && Math.random() < 0.33) {
+                        const lastPlace = activeRacing[activeRacing.length - 1];
+                        lastPlace.state = 'max_boost';
+                        lastPlace.maxBoostTimer = 15.0; 
+                        
+                        if (!isMuted) {
+                            const maxSnd = new Audio('max.mp3');
+                            maxSnd.volume = Math.min(1.0, sfxVolume * 1.5);
+                            maxSnd.play().catch(()=>{});
+                        }
+                        
+                        playBoxRadio(lastPlace.member, 'MAX VERSTAPPEN MODE!', false);
+                        showCenterAlert('MAX BOOST!', lastPlace.member.color, 2500);
+                        setEventFocus([lastPlace], 6.0); 
+                    }
+                }
 
-                // 매 랩 펑처 (중위권 이상)
-                if (!lapPunctureTriggered[leaderLap] && lapProgress > 0.1 && lapProgress < 0.9) {
+                // 매 랩 펑처 (상위권 한정)
+                // lapPunctureTriggerPos 안의 무작위 값(10%~80%)을 지났을 때 이벤트 발동
+                if (!lapPunctureTriggered[leaderLap] && lapProgress > lapPunctureTriggerPos[leaderLap]) {
                     lapPunctureTriggered[leaderLap] = true;
+                    // 상위권 50%만 필터링 
                     const candidates = runners.filter(r => !r.finished && !r.retired && r.state === 'normal' && r.currentRank <= Math.ceil(totalRacing / 2));
                     if (candidates.length > 0) {
                         const r = candidates[Math.floor(Math.random() * candidates.length)];
                         r.state = 'puncture'; r.stateTimer = 2.0; 
-                        r.currentSpdMult = 0.45; r.targetSpdMult = 0.45; // 0.3보다 덜 느려짐
+                        r.currentSpdMult = 0.45; r.targetSpdMult = 0.45; 
                         playBoxRadio(r.member, '타이어 파손, 피트인 교체', true);
                         emitParticles(r, 0xdddddd, 20); 
                         setEventFocus([r], 3.0);
@@ -1865,16 +1954,13 @@
 
                 ui.lapInfo.textContent = `LAP ${leaderLap}/${selectedLaps}`;
 
-                // --- 골라인 카메라 및 뷰포인트 로직 ---
-                let forceCameraCut = false;
-                
-                // 골라인 150 남았을 때부터는 피니시 카메라 모드로 고정
-                if (absoluteLeader && absoluteLeader.lap === selectedLaps && (absoluteLeader.targetDist - absoluteLeader.position) < 150) {
+                // 카메라 뷰 모드 결정
+                if (absoluteLeader && absoluteLeader.lap === selectedLaps && (absoluteLeader.targetDist - absoluteLeader.position) < 200) {
                     isFinishCamera = true;
                 }
 
                 if (isFinishCamera) {
-                    // 골인 카메라: 순차적으로 아직 완주하지 않은 선수들을 타겟팅
+                    // 순차적으로 아직 완주하지 않은 선수를 계속 타겟팅
                     let target = absoluteLeader;
                     for (let i=0; i<activeRacing.length; i++) {
                         if (!activeRacing[i].finished) {
@@ -1882,8 +1968,8 @@
                             break;
                         }
                     }
+                    if (cameraMode !== 'finish') { cameraMode = 'finish'; forceCameraCut = true; }
                     window._currentFocusTarget = target;
-                    cameraMode = 'front';
                 } else {
                     if (eventFocusTimer > 0 && activeEventTargets.length > 0) {
                         eventFocusTimer -= realDelta; 
@@ -1914,12 +2000,14 @@
                     }
                 }
 
-                if (window._prevPackLeader !== window._currentFocusTarget && !isFinishCamera) {
-                    forceCameraCut = true; window._prevPackLeader = window._currentFocusTarget;
+                if (window._prevPackLeader !== window._currentFocusTarget) {
+                    forceCameraCut = true; 
+                    window._prevPackLeader = window._currentFocusTarget;
                 }
 
                 let currentPackLeaderPos = window._currentFocusTarget ? window._currentFocusTarget.position : 0;
                 
+                // 스무딩 처리된 타겟 진행도 (카메라가 떨지 않고 부드럽게 쫓아감)
                 if(isNaN(window._smoothLeaderPos)) window._smoothLeaderPos = 0;
                 window._smoothLeaderPos += (currentPackLeaderPos - window._smoothLeaderPos) * 0.05;
 
@@ -1945,16 +2033,26 @@
                             case 'side': tPos.copy(cp).add(cn.clone().multiplyScalar(60 * zoomFactor)).add(new THREE.Vector3(0, 25 * zoomFactor, 0)); lPos.copy(cp); break;
                             case 'front': tPos.copy(cp).add(ct.clone().multiplyScalar(60 * zoomFactor)).add(new THREE.Vector3(0, 20 * zoomFactor, 0)); lPos.copy(cp); break;
                             case 'follow': tPos.copy(cp).sub(ct.clone().multiplyScalar(35 * zoomFactor)).add(new THREE.Vector3(0, 15 * zoomFactor, 0)); lPos.copy(cp).add(ct.clone().multiplyScalar(15)); break;
+                            case 'finish': 
+                                // 골라인 전용 먼 시점 카메라
+                                const cpFin = trackCurve.getPointAt(0); 
+                                const ctFin = trackCurve.getTangentAt(0); 
+                                const cnFin = new THREE.Vector3(ctFin.z, 0, -ctFin.x).normalize();
+                                tPos.copy(cpFin).add(ctFin.clone().multiplyScalar(150 * zoomFactor)).add(cnFin.clone().multiplyScalar(40 * zoomFactor)).add(new THREE.Vector3(0, 30 * zoomFactor, 0)); 
+                                lPos.copy(cpFin); 
+                                break;
                             default: tPos.copy(cp).sub(ct.clone().multiplyScalar(70 * zoomFactor)).add(new THREE.Vector3(0, 50 * zoomFactor, 0)); lPos.copy(cp).add(ct.clone().multiplyScalar(10)); break;
                         }
                     }
                 }
 
-                if (forceCameraCut && !isFinishCamera) {
-                    camera.position.copy(tPos); window._camTargetPos.copy(tPos); window._camLookAtPos.copy(lPos); camera.lookAt(lPos);
+                // 컷 전환(Lerp 생략)
+                if (forceCameraCut) {
+                    camera.position.copy(tPos); 
+                    camera.lookAt(lPos);
                 } else {
-                    window._camTargetPos.lerp(tPos, 0.05); window._camLookAtPos.lerp(lPos, 0.08);
-                    camera.position.copy(window._camTargetPos); camera.lookAt(window._camLookAtPos);
+                    camera.position.copy(tPos); 
+                    camera.lookAt(lPos);
                 }
 
                 if(window._sun && runners.length > 0) {
@@ -2000,6 +2098,7 @@
                 let statClass = '';
                 if(r.retired) { statText = 'DNF'; statClass = 'out'; }
                 else if(r.finished) { statText = '🏁'; statClass = 'finish text-xl'; }
+                else if(r.state === 'max_boost') { statText = 'MAX'; statClass = 'text-[0.7rem] text-[#ff0000] font-bold'; }
                 else if(r.state === 'overtake') {
                     // 오버테이크 깜빡이는 네모
                     statText = `<div style="display:inline-block; width:12px; height:12px; background-color:var(--theme-mint); animation: flashRadio 0.3s infinite alternate;"></div>`;
