@@ -1180,7 +1180,7 @@
         }
 
         function buildEnvironment() {
-            const scale = 2.0;
+            const scale = 2.2;
             
             // Qiddiya (제공된 이미지) 트랙 레이아웃에 맞춘 좌표 배열
             const points = [
@@ -1892,7 +1892,7 @@
                         const r = candidates[Math.floor(Math.random() * candidates.length)];
                         r.state = 'puncture'; r.stateTimer = 2.0; 
                         r.currentSpdMult = 0.45; r.targetSpdMult = 0.45; 
-                        playBoxRadio(r.member, '타이어 펑처, 감속 요망', true);
+                        playBoxRadio(r.member, '타이어 펑처', true);
                         emitParticles(r, 0xdddddd, 20); 
                         setEventFocus([r], 3.0);
                     }
@@ -2100,10 +2100,9 @@
                 isTransitioningToResult = true; 
                 setFastForward(false); stopEngineSound(); stopBGM();
                 
-                setTimeout(() => {
-                    raceEnded = true; 
-                    showResultScreen();
-                }, 1000); 
+                // 대기 시간 없이 즉시 레이스 루프를 종료하고 결과 창을 띄움
+                raceEnded = true; 
+                showResultScreen();
             }
         }
 
