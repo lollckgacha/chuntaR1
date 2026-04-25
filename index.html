@@ -384,13 +384,18 @@
         <div id="gridIntroOverlay" class="hidden absolute bottom-24 left-10 z-50 flex items-end pointer-events-none">
             <div id="gridIntroBox" class="bg-[rgba(10,10,15,0.95)] border border-[rgba(255,255,255,0.1)] border-l-8 p-6 pr-16 shadow-[0_10px_30px_rgba(0,0,0,0.8)] transform skew-x-[-15deg] transition-all duration-300 opacity-0 translate-x-[-50px]">
                 <div class="transform skew-x-[15deg]">
-                    <div class="text-gray-400 ea-font text-xl mb-1 flex items-center gap-2">
-                        <span class="inline-block w-4 h-4 bg-[var(--theme-mint)] rotate-45"></span>
+                    <div class="text-gray-400 ea-font text-2xl mb-1 flex items-center gap-2">
+                        <span id="gridIntroColor" class="inline-block w-4 h-4 rotate-45" style="background-color: var(--theme-mint);"></span>
                         <span id="gridIntroPos">GRID 1</span>
                     </div>
-                    <div class="text-white ea-font-black text-6xl tracking-widest mt-2" id="gridIntroName">NAME</div>
+                    <div class="text-white ea-font-black text-8xl tracking-widest mt-2" id="gridIntroName">NAME</div>
                 </div>
             </div>
+        </div>
+
+        <!-- NEW: Skip Intro Button -->
+        <div id="skipIntroBtnContainer" class="hidden absolute bottom-12 left-1/2 transform -translate-x-1/2 z-[200]">
+            <button class="ea-btn px-8 py-3 ea-font text-xl shadow-[0_5px_15px_rgba(0,0,0,0.8)]" onclick="skipGridIntro()"><span>그리드 소개 건너뛰기</span></button>
         </div>
 
         <!-- Abort Prompt Overlay -->
@@ -560,7 +565,8 @@
             settingsModal: document.getElementById('settingsModal'),
             speedLines: document.getElementById('speedLines'),
             teamRadioContainer: document.getElementById('teamRadioContainer'),
-            gridIntroOverlay: document.getElementById('gridIntroOverlay')
+            gridIntroOverlay: document.getElementById('gridIntroOverlay'),
+            skipIntroBtn: document.getElementById('skipIntroBtnContainer')
         };
 
         function init() {
@@ -989,6 +995,27 @@
             }
         }
 
+        function skipGridIntro() {
+            if (!startingSequence || cameraMode === 'intro_lights' || cameraMode === 'follow') return;
+            
+            const p0 = trackCurve.getPointAt(0);
+            const t0 = trackCurve.getTangentAt(0);
+            const gantryTarget = p0.clone().add(new THREE.Vector3(0, 22, 0)); 
+            const endPos = p0.clone().sub(t0.clone().multiplyScalar(25)).add(new THREE.Vector3(0, 3, 0));
+            
+            camera.position.copy(endPos);
+            camera.lookAt(gantryTarget);
+
+            ui.gridIntroOverlay.classList.add('hidden');
+            ui.skipIntroBtn.classList.add('hidden');
+            
+            cameraMode = 'intro_lights';
+            introTimer = 0;
+            lightState = 0;
+            
+            if (gridAudioObj) { gridAudioObj.pause(); gridAudioObj = null; }
+        }
+
         function startRaceTransition() {
             initAudio(); 
             document.body.style.overflow = 'hidden';
@@ -1017,6 +1044,11 @@
             vscActive = false; vscTimer = 0;
             isPhotoFinish = false;
             photoFinishTimer = 0;
+            
+            ui.lbContainer.style.opacity = '0';
+            ui.toastContainer.innerHTML = '';
+            ui.lapInfo.textContent = `LAP 1/${selectedLaps}`;
+            ui.skipIntroBtn.classList.add('hidden');
             
             playBGM();
             initEngine();
@@ -1574,6 +1606,7 @@
             
             ui.lbContainer.style.opacity = '0';
             if(ui.gridIntroOverlay) ui.gridIntroOverlay.classList.add('hidden');
+            if(ui.skipIntroBtn) ui.skipIntroBtn.classList.remove('hidden');
 
             if (!isMuted) {
                 if(bgm) bgm.volume = bgmVolume * masterVolume * 0.2; // 그리드 소개 중 BGM 볼륨 감소
@@ -1701,6 +1734,7 @@
                             cameraMode = 'intro_fly';
                             introTimer = 0;
                             ui.gridIntroOverlay.classList.add('hidden');
+                            ui.skipIntroBtn.classList.add('hidden');
                             
                             const p0 = trackCurve.getPointAt(0);
                             const t0 = trackCurve.getTangentAt(0);
@@ -1715,6 +1749,7 @@
                             document.getElementById('gridIntroPos').textContent = `GRID ${introIdx + 1}`;
                             document.getElementById('gridIntroName').textContent = r.member.name;
                             document.getElementById('gridIntroBox').style.borderLeftColor = r.member.color;
+                            document.getElementById('gridIntroColor').style.backgroundColor = r.member.color;
                             
                             let box = document.getElementById('gridIntroBox');
                             box.style.opacity = 0;
@@ -1723,7 +1758,6 @@
                                 if (!gameRunning) return;
                                 box.style.opacity = 1;
                                 box.style.transform = 'skewX(-15deg) translateX(0)';
-                                playSound('beep');
                             }, 50);
 
                             let prog = (r.position % trackLength) / trackLength;
@@ -1774,6 +1808,7 @@
                     }
                 } else if (cameraMode === 'intro_lights') {
                     introTimer += realDelta;
+                    ui.skipIntroBtn.classList.add('hidden');
                     
                     if (introTimer > 1.0 && lightState === 0) { lightState=1; window._startLights[0].material.color.setHex(0xff2222); playSound('beep'); }
                     if (introTimer > 2.0 && lightState === 1) { lightState=2; window._startLights[1].material.color.setHex(0xff2222); playSound('beep'); }
