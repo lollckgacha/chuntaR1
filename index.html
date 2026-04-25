@@ -82,7 +82,7 @@
         .num-btn:disabled { opacity: 0.2; cursor: not-allowed; }
 
         #gameScreen { overflow: hidden; }
-        #gameCanvas { width: 100%; height: 100%; display: block; cursor: pointer; }
+        #gameCanvas { width: 100%; height: 100%; display: block; cursor: default; }
         
         .telemetry-tower { position: absolute; top: 30px; left: 30px; z-index: 20; width: 290px; } 
         .telemetry-header { background: var(--theme-mint); color: var(--ea-dark); padding: 6px 12px; font-size: 1.1rem; display: flex; justify-content: space-between; clip-path: polygon(0 0, 100% 0, 95% 100%, 0 100%); margin-bottom: 4px; }
@@ -1625,7 +1625,7 @@
             if(ui.skipIntroBtn) ui.skipIntroBtn.classList.remove('hidden');
 
             if (!isMuted) {
-                if(bgm) bgm.volume = isMuted ? 0 : bgmVolume * masterVolume; // 그리드 소개 중 BGM 볼륨 감소 제거 (동일하게 유지)
+                if(bgm) bgm.volume = isMuted ? 0 : bgmVolume * masterVolume; 
                 gridAudioObj = new Audio('startinggrid.mp3');
                 gridAudioObj.volume = Math.min(1.0, bgmVolume * masterVolume * 1.5); 
                 gridAudioObj.play().catch(()=>{});
