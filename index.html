@@ -677,8 +677,8 @@
             ui.settingsModal.classList.add('hidden');
             gamePaused = false;
             lastTime = performance.now(); 
-            if(raceStarted && !raceEnded && !isTransitioningToResult) {
-                startEngineSound();
+            if(gameRunning && !raceEnded && !isTransitioningToResult) {
+                if (raceStarted) startEngineSound();
                 if(bgm) bgm.play().catch(()=>{});
             }
             // gridAudioObj는 재개하지 않음 (대기 화면 중 설정 창을 열고 닫을 때의 음성 겹침 방지)
@@ -710,8 +710,8 @@
             document.getElementById('abortPromptOverlay').classList.add('hidden');
             gamePaused = false;
             lastTime = performance.now(); 
-            if(raceStarted && !raceEnded && !isTransitioningToResult) {
-                startEngineSound();
+            if(gameRunning && !raceEnded && !isTransitioningToResult) {
+                if (raceStarted) startEngineSound();
                 if(bgm) bgm.play().catch(()=>{});
             }
         }
@@ -1075,7 +1075,7 @@
             scene.background = new THREE.Color(0x87CEEB); 
             scene.fog = new THREE.FogExp2(0x87CEEB, 0.0015);
             
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 3000);
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 15000);
             
             renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -1181,6 +1181,46 @@
             const group = new THREE.Group();
             group.add(new THREE.Mesh(geoFront, mat)); group.add(new THREE.Mesh(geoBack, mat));
             return group;
+        }
+
+        // --- 관중석(Grandstands) 및 도시 스카이라인 건물 추가 ---
+        function addGrandstand(x, z, rotY) {
+            const group = new THREE.Group();
+            const seatMat = new THREE.MeshStandardMaterial({color: 0xcc1111, roughness: 0.9});
+            const structMat = new THREE.MeshStandardMaterial({color: 0x555555, roughness: 0.7});
+            
+            // Base
+            const base = new THREE.Mesh(new THREE.BoxGeometry(60, 10, 30), structMat);
+            base.position.set(0, 5, 0);
+            base.castShadow = true; base.receiveShadow = true;
+            group.add(base);
+
+            // Tiers (관중석 층)
+            for(let i=0; i<6; i++) {
+                const tier = new THREE.Mesh(new THREE.BoxGeometry(60, 2, 5), seatMat);
+                tier.position.set(0, 11 + i*2.5, -12 + i*4.5);
+                tier.castShadow = true; tier.receiveShadow = true;
+                group.add(tier);
+            }
+            
+            // Roof (지붕)
+            const roof = new THREE.Mesh(new THREE.BoxGeometry(64, 1.5, 35), structMat);
+            roof.position.set(0, 35, 5);
+            roof.rotation.x = -0.15;
+            roof.castShadow = true; roof.receiveShadow = true;
+            group.add(roof);
+
+            // Pillars (기둥)
+            const p1 = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 25), structMat);
+            p1.position.set(-28, 22.5, 18);
+            group.add(p1);
+            const p2 = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 25), structMat);
+            p2.position.set(28, 22.5, 18);
+            group.add(p2);
+
+            group.position.set(x, 0, z);
+            group.rotation.y = rotY;
+            scene.add(group);
         }
 
         function createAdTexture(callback) {
@@ -1840,6 +1880,7 @@
                         playSound('beep_high');
                         
                         if (!isMuted) {
+                            if(bgm) bgm.volume = isMuted ? 0 : bgmVolume * masterVolume; // BGM 볼륨 원복
                             const gasokSnd = new Audio('gasok.mp3');
                             gasokSnd.volume = Math.min(1.0, sfxVolume * masterVolume * 0.9); 
                             gasokSnd.play().catch(e => console.log('gasok.mp3 play failed:', e));
