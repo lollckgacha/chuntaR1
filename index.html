@@ -1879,8 +1879,10 @@
                 cx.fillStyle = '#fff'; cx.font = `italic 900 80px 'Noto Sans KR', sans-serif`;
                 cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(m.name, 256, 68);
                 
-                const nameTag = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 0.75), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cvs), transparent: true, depthTest: false }));
-                nameTag.position.set(0, 2.5, 0); 
+                const nameTag = new THREE.Mesh(new THREE.PlaneGeometry(4.5, 1.125), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cvs), transparent: true, depthTest: false }));
+
+                // 크기가 커진 만큼 이름표가 카트를 파고들 수 있으니, 높이(Y축)도 2.5에서 3.0 정도로 살짝 올려주시면 좋습니다.
+                nameTag.position.set(0, 3.0, 0);
                 group.add(nameTag);
                 
                 group.scale.setScalar(2.2);
