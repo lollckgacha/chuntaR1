@@ -60,14 +60,15 @@
         .ea-btn-primary { background: var(--theme-mint); border-color: var(--theme-mint); color: var(--ea-dark); }
         .ea-btn-primary:hover:not(:disabled) { background: #8de5dd; border-color: #8de5dd; color: var(--ea-dark); box-shadow: 0 0 30px rgba(172, 254, 248, 0.5); }
 
-        /* Driver Cards */
+        /* Driver Cards - 드래그 지원 스타일 추가 */
         .driver-card {
-            background: #111; border: 1px solid var(--ea-border); position: relative; overflow: hidden; cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); aspect-ratio: 3/4;
+            background: #111; border: 1px solid var(--ea-border); position: relative; overflow: hidden; cursor: grab;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); aspect-ratio: 3/4; user-select: none;
         }
-        .driver-card img { width: 100%; height: 100%; object-fit: cover; object-position: top; transition: transform 0.5s ease, filter 0.3s ease; filter: grayscale(100%) brightness(0.6); }
-        .driver-card .card-overlay { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.2) 50%, transparent 100%); z-index: 10; }
-        .driver-card .card-info { position: absolute; bottom: 0; left: 0; width: 100%; padding: 12px; z-index: 20; transform: translateY(5px); transition: transform 0.3s ease; }
+        .driver-card:active { cursor: grabbing; }
+        .driver-card img { width: 100%; height: 100%; object-fit: cover; object-position: top; transition: transform 0.5s ease, filter 0.3s ease; filter: grayscale(100%) brightness(0.6); pointer-events: none; }
+        .driver-card .card-overlay { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.2) 50%, transparent 100%); z-index: 10; pointer-events: none; }
+        .driver-card .card-info { position: absolute; bottom: 0; left: 0; width: 100%; padding: 12px; z-index: 20; transform: translateY(5px); transition: transform 0.3s ease; pointer-events: none; }
         .driver-card:hover:not(.selected) img { transform: scale(1.05); filter: grayscale(50%) brightness(0.8); }
         .driver-card:hover:not(.selected) .card-info { transform: translateY(0); }
         .driver-card.selected { border-color: var(--theme-mint); box-shadow: 0 0 20px rgba(172, 254, 248, 0.3); transform: translateY(-5px); }
@@ -206,18 +207,6 @@
         </div>
     </div>
 
-    <!-- Intro Overlay Prompt -->
-    <div id="introPromptOverlay" class="hidden fixed inset-0 bg-black/90 z-[200] flex items-center justify-center backdrop-blur-sm">
-        <div class="ea-panel p-10 text-center w-full max-w-lg">
-            <h2 class="text-3xl ea-font-black text-white mb-4">오프닝을 재생하시겠습니까?</h2>
-            <p class="text-gray-400 mb-10 ea-font">(나중에 설정에서 다시 보실 수 있습니다.)</p>
-            <div class="flex gap-4 justify-center">
-                <button class="ea-btn ea-btn-primary px-10 py-4 flex-1 text-xl" onclick="playIntro()"><span>예</span></button>
-                <button class="ea-btn px-10 py-4 flex-1 text-xl" onclick="skipIntroPrompt()"><span>아니오</span></button>
-            </div>
-        </div>
-    </div>
-
     <!-- Intro Video Player -->
     <div id="videoOverlay" class="hidden fixed inset-0 bg-black z-[300]">
         <video id="introVideo" class="w-full h-full object-contain" src="R1.mkv"></video>
@@ -255,7 +244,9 @@
                 <h1 class="text-4xl text-white ea-font-black m-0 leading-none">천타버스 <span class="text-[#acfef8]">그랑프리™</span></h1>
             </div>
             <div class="hidden lg:flex gap-8 text-gray-400 ea-font text-xl">
-                <span class="text-[#acfef8] border-b-2 border-[#acfef8] pb-1 cursor-default">레이스 설정</span>
+                <!-- 변경됨: 탭 스위칭 기능 추가 -->
+                <span id="navChunta" class="text-[#acfef8] border-b-2 border-[#acfef8] pb-1 cursor-pointer transition-colors" onclick="switchRoster('chunta')">천타버스</span>
+                <span id="navOther" class="hover:text-white cursor-pointer transition-colors" onclick="switchRoster('other')">기타 컨텐츠</span>
                 <span class="hover:text-white cursor-pointer transition-colors" onclick="openSettings()">환경설정</span>
             </div>
         </header>
@@ -285,7 +276,7 @@
                             <span class="ea-font text-lg text-white">팀 수 설정</span>
                             <span id="teamCountText" class="ea-font-black text-xl text-[#acfef8]">-</span>
                         </div>
-                        <div class="text-[#acfef8] text-sm mb-3 ea-font font-bold">※ U자 스네이크 방식으로 배정됩니다.</div>
+                        <div class="text-[#acfef8] text-sm mb-3 ea-font font-bold">※ 스네이크 방식으로 배정됩니다.</div>
                         <div class="flex gap-2">
                             <button class="ea-btn flex-1 py-2 team-btn" data-teams="2"><span>2팀</span></button>
                             <button class="ea-btn flex-1 py-2 team-btn" data-teams="3"><span>3팀</span></button>
@@ -312,10 +303,17 @@
                         <div class="flex justify-between items-center mb-3">
                             <span class="ea-font text-lg text-white">참가자 일괄 선택</span>
                         </div>
-                        <div class="flex gap-2">
+                        <!-- Chuntaverse Buttons -->
+                        <div class="flex gap-2" id="selectionButtonsChunta">
                             <button id="selectAllBtn" class="ea-btn flex-1 py-3 ea-font text-sm"><span>전체 선택</span></button>
                             <button id="selectPassedBtn" class="ea-btn flex-1 py-3 ea-font text-sm hidden"><span>이전 합격자</span></button>
                             <button id="selectFailedBtn" class="ea-btn flex-1 py-3 ea-font text-sm hidden"><span>이전 탈락자</span></button>
+                        </div>
+                        <!-- Other Content Buttons -->
+                        <div class="flex gap-2 hidden" id="selectionButtonsOther">
+                            <button id="selectAllOtherBtn" class="ea-btn flex-1 py-3 ea-font text-sm"><span>전체 선택</span></button>
+                            <button id="selectSurvivalPoolBtn" class="ea-btn flex-1 py-3 ea-font text-sm"><span>멤버뽑기 선택</span></button>
+                            <button id="selectTeamPoolBtn" class="ea-btn flex-1 py-3 ea-font text-sm"><span>팀나누기 선택</span></button>
                         </div>
                     </div>
 
@@ -331,11 +329,11 @@
                 </div>
             </div>
 
-            <div class="w-full lg:w-2/3">
+            <div class="w-full lg:w-2/3 flex flex-col">
                 <div class="flex justify-between items-end mb-4">
                     <h3 class="ea-font text-3xl text-white m-0">드라이버 라인업</h3>
                 </div>
-                <div id="memberGrid" class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 gap-4"></div>
+                <div id="memberGrid" class="w-full"></div>
             </div>
         </div>
     </div>
@@ -502,7 +500,7 @@
     <script>
         const baseUrl = 'https://raw.githubusercontent.com/Cren0p/CRD/refs/heads/main/';
         
-        let members = [
+        let membersChuntaverse = [
             { id: 1, name: '천양', imgWebp: baseUrl + '01.webp', imgJpg: baseUrl + '01.jpg', color: '#43EAF6' },
             { id: 2, name: '마다옴', imgWebp: baseUrl + '02.webp', imgJpg: baseUrl + '02.jpg', color: '#FFF5C3' },
             { id: 3, name: '나나문', imgWebp: baseUrl + '03.webp', imgJpg: baseUrl + '03.jpg', color: '#F4F6FF' },
@@ -517,12 +515,62 @@
             { id: 12, name: '파니', imgWebp: baseUrl + '12.webp', imgJpg: baseUrl + '12.jpg', color: '#9FC5E8' }
         ];
 
-        // 멤버 정렬 로직: 천양(1번)은 항상 최우선, 나머지는 이름의 가나다순 정렬
-        members.sort((a, b) => {
-            if (a.id === 1) return -1;
-            if (b.id === 1) return 1;
-            return a.name.localeCompare(b.name);
+        // ============================================================================
+        // ▼ 기타 컨텐츠 전체 멤버 데이터베이스 (이곳에 새로운 멤버를 미리 다 등록해두세요) ▼
+        const ALL_OTHER_MEMBERS = [
+             { id: 101, name: '난워니', imgWebp: 'guest/nanwony.png', imgJpg: 'guest/nanwony.png', color: '#ffff00' },
+            { id: 102, name: '뢴트게늄', imgWebp: 'guest/roen.webp', imgJpg: 'guest/roen.webp', color: '#e5446e' },
+            { id: 103, name: '리냐', imgWebp: 'guest/lina.png', imgJpg: 'guest/lina.png', color: '#f35683' }
+        ];
+
+        // ▼ 실제 레이스에 표시할 기타 멤버 선택 ▼
+        // 1. '멤버 뽑기' 대기열에 기본으로 들어갈 멤버
+        const ACTIVE_SURVIVAL_MEMBERS = [
+            '난워니', 
+            '뢴트게늄',
+            '리냐',
+            '김웰로', // 이런 식으로 기존 천타버스 멤버 이름만 적어도 알아서 불러옵니다!
+            '파니'
+        ];
+
+        // 2. '팀 나누기' 대기열에 미리 넘어가 있을 멤버
+        const ACTIVE_TEAM_MEMBERS = [
+            '천양',
+            '마다옴',
+            '캬앙',
+            '달타'
+            
+        ];
+
+        // 선택된 이름/ID를 바탕으로 실제 사용할 기타 멤버 리스트 생성
+        let membersOther = [];
+        
+        ACTIVE_SURVIVAL_MEMBERS.forEach(input => {
+            let found = ALL_OTHER_MEMBERS.find(m => m.id === input || m.name === input) || 
+                        membersChuntaverse.find(m => m.id === input || m.name === input);
+            if (found) membersOther.push({ ...found, pool: 'survival' });
         });
+
+        ACTIVE_TEAM_MEMBERS.forEach(input => {
+            let found = ALL_OTHER_MEMBERS.find(m => m.id === input || m.name === input) || 
+                        membersChuntaverse.find(m => m.id === input || m.name === input);
+            if (found) membersOther.push({ ...found, pool: 'team' });
+        });
+        // ============================================================================
+
+        // 멤버 정렬 로직 (천양 1순위, 나머지 가나다순)
+        function sortMembers(arr) {
+            arr.sort((a, b) => {
+                if (a.id === 1) return -1;
+                if (b.id === 1) return 1;
+                return a.name.localeCompare(b.name);
+            });
+        }
+        sortMembers(membersChuntaverse);
+        sortMembers(membersOther);
+
+        let currentRosterMode = 'chunta';
+        let members = membersChuntaverse;
 
         let selectedMembers = new Set();
         let passCount = null;
@@ -629,7 +677,6 @@
         };
 
         function init() {
-            createMemberGrid();
             renderPassButtons();
             setupLapButtons();
             setupTeamButtons();
@@ -641,6 +688,7 @@
 
             preloadImages();
 
+            // Chuntaverse Button Events
             document.getElementById('selectAllBtn').onclick = () => {
                 if (selectedMembers.size === members.length) selectedMembers.clear();
                 else members.forEach(m => selectedMembers.add(m.id));
@@ -648,6 +696,26 @@
             };
             document.getElementById('selectPassedBtn').onclick = () => applyPrev(lastRacePassedIds);
             document.getElementById('selectFailedBtn').onclick = () => applyPrev(lastRaceFailedIds);
+            
+            // Other Content Button Events
+            document.getElementById('selectAllOtherBtn').onclick = () => {
+                if (selectedMembers.size === members.length) selectedMembers.clear();
+                else members.forEach(m => selectedMembers.add(m.id));
+                updateSelectionUI();
+            };
+            document.getElementById('selectSurvivalPoolBtn').onclick = () => {
+                const targetIds = members.filter(m => m.pool === 'survival').map(m => m.id);
+                const allSelected = targetIds.every(id => selectedMembers.has(id)) && targetIds.length > 0;
+                targetIds.forEach(id => allSelected ? selectedMembers.delete(id) : selectedMembers.add(id));
+                updateSelectionUI();
+            };
+            document.getElementById('selectTeamPoolBtn').onclick = () => {
+                const targetIds = members.filter(m => m.pool === 'team').map(m => m.id);
+                const allSelected = targetIds.every(id => selectedMembers.has(id)) && targetIds.length > 0;
+                targetIds.forEach(id => allSelected ? selectedMembers.delete(id) : selectedMembers.add(id));
+                updateSelectionUI();
+            };
+
             ui.startBtn.onclick = startRaceTransition;
             
             document.getElementById('captureBtn').onclick = captureResultsText;
@@ -659,6 +727,51 @@
                     zoomFactor = Math.max(0.4, Math.min(3.0, zoomFactor));
                 }
             });
+        }
+
+        // --- Roster Switching Logic ---
+        function switchRoster(mode) {
+            if (currentRosterMode === mode) return;
+            currentRosterMode = mode;
+            
+            const navChunta = document.getElementById('navChunta');
+            const navOther = document.getElementById('navOther');
+            
+            if (mode === 'chunta') {
+                navChunta.className = "text-[#acfef8] border-b-2 border-[#acfef8] pb-1 cursor-pointer transition-colors";
+                navOther.className = "hover:text-white cursor-pointer transition-colors text-gray-400";
+                members = membersChuntaverse;
+                document.getElementById('selectionButtonsChunta').classList.remove('hidden');
+                document.getElementById('selectionButtonsOther').classList.add('hidden');
+            } else {
+                navOther.className = "text-[#acfef8] border-b-2 border-[#acfef8] pb-1 cursor-pointer transition-colors";
+                navChunta.className = "hover:text-white cursor-pointer transition-colors text-gray-400";
+                members = membersOther;
+                document.getElementById('selectionButtonsChunta').classList.add('hidden');
+                document.getElementById('selectionButtonsOther').classList.remove('hidden');
+            }
+            
+            selectedMembers.clear();
+            passCount = null;
+            lastRacePassedIds.clear();
+            lastRaceFailedIds.clear();
+            
+            // Chuntaverse 모드일 경우에만 합격자/탈락자 버튼 업데이트
+            updatePassedFailedButtons();
+            
+            preloadImages(); // UI 및 Grid 갱신
+        }
+
+        function updatePassedFailedButtons() {
+            if (currentRosterMode === 'chunta') {
+                if (!isTeamMode && (lastRacePassedIds.size > 0 || lastRaceFailedIds.size > 0)) {
+                    document.getElementById('selectPassedBtn').classList.remove('hidden');
+                    document.getElementById('selectFailedBtn').classList.remove('hidden');
+                } else {
+                    document.getElementById('selectPassedBtn').classList.add('hidden');
+                    document.getElementById('selectFailedBtn').classList.add('hidden');
+                }
+            }
         }
 
         // --- Intro Video Logic ---
@@ -827,60 +940,183 @@
 
         function preloadImages() {
             let loaded = 0;
-            const loader = new THREE.TextureLoader();
-            loader.setCrossOrigin('anonymous');
+            allImagesLoaded = false;
+            updateStartBtnState();
+            ui.startSpan.textContent = '로딩 중...';
             
+            if(members.length === 0) {
+                onAllLoaded();
+                return;
+            }
+
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('loadProgress').textContent = `0/${members.length}`;
+
             members.forEach(m => {
-                loader.load(m.imgJpg, (tex) => {
-                    tex.magFilter = THREE.LinearFilter; 
-                    tex.minFilter = THREE.LinearMipmapLinearFilter; 
-                    tex.anisotropy = maxAnisotropy; 
-                    preloadedTextures[m.id] = tex;
-                    loaded++; document.getElementById('loadProgress').textContent = `${loaded}/${members.length}`;
+                if (preloadedTextures[m.id]) {
+                    loaded++;
+                    document.getElementById('loadProgress').textContent = `${loaded}/${members.length}`;
                     if (loaded === members.length) onAllLoaded();
-                }, undefined, () => {
-                    loaded++; if (loaded === members.length) onAllLoaded();
-                });
+                } else {
+                    const fallbackImg = 'logo2.png';
+                    let targetImg = m.imgJpg || fallbackImg;
+                    const isExternal = targetImg.startsWith('http');
+                    const tempLoader = new THREE.TextureLoader();
+                    if (isExternal) tempLoader.setCrossOrigin('anonymous');
+                    
+                    tempLoader.load(targetImg, (tex) => {
+                        tex.magFilter = THREE.LinearFilter; 
+                        tex.minFilter = THREE.LinearMipmapLinearFilter; 
+                        tex.anisotropy = maxAnisotropy; 
+                        preloadedTextures[m.id] = tex;
+                        loaded++; document.getElementById('loadProgress').textContent = `${loaded}/${members.length}`;
+                        if (loaded === members.length) onAllLoaded();
+                    }, undefined, () => {
+                        // 이미지 로드 실패 시 logo2.png 대체 시도
+                        const fbLoader = new THREE.TextureLoader();
+                        fbLoader.load(fallbackImg, (fbTex) => {
+                            fbTex.magFilter = THREE.LinearFilter; 
+                            fbTex.minFilter = THREE.LinearMipmapLinearFilter; 
+                            fbTex.anisotropy = maxAnisotropy; 
+                            preloadedTextures[m.id] = fbTex;
+                            loaded++; document.getElementById('loadProgress').textContent = `${loaded}/${members.length}`;
+                            if (loaded === members.length) onAllLoaded();
+                        }, undefined, () => {
+                            // 대체 이미지마저 실패했을 경우 진행을 위해 강제 패스
+                            loaded++; document.getElementById('loadProgress').textContent = `${loaded}/${members.length}`;
+                            if (loaded === members.length) onAllLoaded();
+                        });
+                    });
+                }
             });
             
             function onAllLoaded() {
                 allImagesLoaded = true; 
                 document.getElementById('loadingOverlay').style.display = 'none'; 
-                updateStartBtnState();
-                document.getElementById('introPromptOverlay').classList.remove('hidden');
+                createMemberGrid();
+                updateSelectionUI();
+                
+                // 불필요한 인트로 오버레이 방지 (기본상태에선 메인메뉴 띄우기 위함)
+                const introPrompt = document.getElementById('introPromptOverlay');
+                if (introPrompt) introPrompt.classList.add('hidden');
+                
+                showMainMenu();
             }
+        }
+
+        // --- Drag and Drop API 연동 ---
+        window.allowDrop = (e) => {
+            e.preventDefault();
+            e.currentTarget.classList.add('border-[var(--theme-mint)]', 'bg-[rgba(172,254,248,0.05)]');
+        };
+        window.dragLeave = (e) => {
+            e.currentTarget.classList.remove('border-[var(--theme-mint)]', 'bg-[rgba(172,254,248,0.05)]');
+        };
+        window.dropToPool = (e, pool) => {
+            e.preventDefault();
+            e.currentTarget.classList.remove('border-[var(--theme-mint)]', 'bg-[rgba(172,254,248,0.05)]');
+            const id = e.dataTransfer.getData('text/plain');
+            if(!id) return;
+            const member = members.find(m => m.id.toString() === id);
+            if (member && member.pool !== pool) {
+                member.pool = pool;
+                createMemberGrid();
+                updateSelectionUI();
+            }
+        };
+
+        function createCard(m) {
+            const card = document.createElement('div');
+            card.className = 'driver-card cursor-grab active:cursor-grabbing';
+            card.dataset.id = m.id;
+            
+            // Drag and Drop 설정
+            card.draggable = true;
+            card.ondragstart = (e) => {
+                e.dataTransfer.setData('text/plain', m.id);
+                e.target.style.opacity = '0.5';
+            };
+            card.ondragend = (e) => {
+                e.target.style.opacity = '1';
+            };
+            
+            const imgUrl = m.imgWebp || 'logo2.png';
+            const coAttr = imgUrl.startsWith('http') ? 'crossorigin="anonymous"' : '';
+            
+            card.innerHTML = `
+                <div class="absolute inset-0" style="background: radial-gradient(circle at center 30%, ${m.color}80 0%, #111 70%); z-index: 1;"></div>
+                <img src="${imgUrl}" ${coAttr} alt="${m.name}" style="position: relative; z-index: 5; pointer-events: none;" onerror="this.onerror=null; this.src='logo2.png';">
+                <div class="card-overlay" style="z-index: 10;"></div>
+                <div class="card-info" style="z-index: 20;">
+                    <div class="w-6 h-1 mb-1" style="background-color: ${m.color}"></div>
+                    <div class="ea-font-black text-xl leading-none text-white tracking-wide truncate">${m.name}</div>
+                </div>
+            `;
+            card.onclick = () => {
+                if (selectedMembers.has(m.id)) selectedMembers.delete(m.id);
+                else selectedMembers.add(m.id);
+                updateSelectionUI();
+            };
+            return card;
         }
 
         function createMemberGrid() {
             ui.grid.innerHTML = '';
-            members.forEach(m => {
-                const card = document.createElement('div');
-                card.className = 'driver-card';
-                card.dataset.id = m.id;
-                card.innerHTML = `
-                    <img src="${m.imgWebp}" crossorigin="anonymous" alt="${m.name}">
-                    <div class="card-overlay"></div>
-                    <div class="card-info">
-                        <div class="w-6 h-1 mb-1" style="background-color: ${m.color}"></div>
-                        <div class="ea-font-black text-xl leading-none text-white tracking-wide truncate">${m.name}</div>
+            
+            if (currentRosterMode === 'chunta') {
+                ui.grid.className = "grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 gap-4";
+                members.forEach(m => ui.grid.appendChild(createCard(m)));
+            } else {
+                ui.grid.className = "flex flex-col gap-6 w-full"; // 기타 컨텐츠용 분할 컨테이너
+                
+                const survivalPool = members.filter(m => m.pool === 'survival');
+                const teamPool = members.filter(m => m.pool === 'team');
+                
+                // Survival Area (멤버 뽑기 대기열)
+                const survDiv = document.createElement('div');
+                survDiv.innerHTML = `
+                    <div class="flex justify-between items-end mb-2">
+                        <h4 class="ea-font text-xl text-[#acfef8]">멤버 뽑기 대기열</h4>
+                        <span class="text-gray-400 text-sm ea-font">${survivalPool.length}명</span>
                     </div>
+                    <div class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 gap-4 min-h-[160px] p-4 border-2 border-dashed border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] transition-colors duration-300" 
+                         ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="dropToPool(event, 'survival')"></div>
                 `;
-                card.onclick = () => {
-                    if (selectedMembers.has(m.id)) selectedMembers.delete(m.id);
-                    else selectedMembers.add(m.id);
-                    updateSelectionUI();
-                };
-                ui.grid.appendChild(card);
-            });
+                const survGrid = survDiv.querySelector('.grid');
+                survivalPool.forEach(m => survGrid.appendChild(createCard(m)));
+                ui.grid.appendChild(survDiv);
+                
+                // Team Area (팀 나누기 대기열)
+                const teamDiv = document.createElement('div');
+                teamDiv.innerHTML = `
+                    <div class="flex justify-between items-end mb-2">
+                        <h4 class="ea-font text-xl text-[#acfef8]">팀 나누기 대기열</h4>
+                        <span class="text-gray-400 text-sm ea-font">${teamPool.length}명</span>
+                    </div>
+                    <div class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 gap-4 min-h-[160px] p-4 border-2 border-dashed border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.3)] transition-colors duration-300" 
+                         ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="dropToPool(event, 'team')"></div>
+                `;
+                const teamGrid = teamDiv.querySelector('.grid');
+                teamPool.forEach(m => teamGrid.appendChild(createCard(m)));
+                ui.grid.appendChild(teamDiv);
+            }
         }
 
         function updateSelectionUI() {
             document.querySelectorAll('.driver-card').forEach((card, idx) => {
-                if (selectedMembers.has(members[idx].id)) card.classList.add('selected');
+                // DOM 요소의 dataset.id 기반으로 동기화 처리
+                const mId = parseInt(card.dataset.id);
+                if (selectedMembers.has(mId)) card.classList.add('selected');
                 else card.classList.remove('selected');
             });
-            document.getElementById('selectedCount').textContent = `${selectedMembers.size}명 선택됨`;
-            document.getElementById('selectAllBtn').querySelector('span').textContent = selectedMembers.size === members.length ? '선택 해제' : '전체 선택';
+            document.getElementById('selectedCount').textContent = `${selectedMembers.size} / ${members.length}`;
+            
+            // 기타모드일때 버튼 텍스트 변경
+            if (currentRosterMode === 'chunta') {
+                document.getElementById('selectAllBtn').querySelector('span').textContent = selectedMembers.size === members.length ? '선택 해제' : '전체 선택';
+            } else {
+                document.getElementById('selectAllOtherBtn').querySelector('span').textContent = selectedMembers.size === members.length ? '선택 해제' : '전체 선택';
+            }
             
             const maxPass = Math.max(1, selectedMembers.size - 1);
             if (passCount > maxPass) passCount = null;
@@ -891,7 +1127,8 @@
         function renderPassButtons() {
             ui.passWrapper.innerHTML = '';
             const max = selectedMembers.size >= 2 ? selectedMembers.size - 1 : 0;
-            for(let i=1; i<=11; i++) {
+            const loopMax = Math.max(11, members.length - 1);
+            for(let i=1; i<=loopMax; i++) {
                 const btn = document.createElement('button');
                 btn.className = `num-btn ea-font ${passCount === i ? 'selected' : ''}`;
                 btn.textContent = i;
@@ -960,6 +1197,8 @@
                 secTeam.classList.remove('hidden');
                 secSurv.classList.add('hidden');
             }
+            
+            updatePassedFailedButtons();
             updateStartBtnState();
         }
 
@@ -1568,7 +1807,10 @@
         }
 
         function buildDrivers() {
-            const arr = Array.from(selectedMembers).map(id => members.find(m => m.id === id));
+            // 현재 선택된 멤버들을 렌더링에 반영 (기타 콘텐츠 모드의 경우 카테고리에 속한 선택 멤버들만)
+            const targetMembers = selectedMembers.size > 0 ? Array.from(selectedMembers).map(id => members.find(m => m.id === id)).filter(Boolean) : [];
+            const arr = [...targetMembers];
+            
             // Shuffle
             for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
             
@@ -1608,12 +1850,38 @@
                     kart.add(w); wheels.push(w);
                 });
 
-                const tex = preloadedTextures[m.id];
-                // 멤버 이미지가 빛에 의해 하얗게 뜨는 것을 방지하기 위해 MeshBasicMaterial 사용
-                const fMat = new THREE.MeshBasicMaterial({ map: tex, color: 0xffffff });
-                const headMatArray = [fMat, fMat, bMat, dMat, fMat, fMat];
-                const head = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), headMatArray);
-                head.position.set(0, 1.3, -0.2); head.castShadow = true; kart.add(head);
+                let tex = preloadedTextures[m.id];
+                
+                // 만약 브라우저 보안 문제 등으로 이미지를 완전히 불러오지 못했다면 하얀 박스 대신 이름이 적힌 컬러 박스 생성
+                if (!tex) {
+                    const fbCvs = document.createElement('canvas');
+                    fbCvs.width = 256; fbCvs.height = 256;
+                    const fCtx = fbCvs.getContext('2d');
+                    fCtx.fillStyle = m.color || '#555';
+                    fCtx.fillRect(0, 0, 256, 256);
+                    fCtx.fillStyle = '#000'; // 글자색 (검정)
+                    fCtx.font = "900 65px 'Noto Sans KR', sans-serif";
+                    fCtx.textAlign = 'center';
+                    fCtx.textBaseline = 'middle';
+                    fCtx.fillText(m.name.substring(0, 4), 128, 128); // 이름 최대 4글자 표기
+                    tex = new THREE.CanvasTexture(fbCvs);
+                    tex.anisotropy = maxAnisotropy;
+                }
+
+                // 1. 배경 박스 (퍼스널 컬러로 꽉 채워진 기본 블록)
+                const baseHeadMat = [bMat, bMat, bMat, dMat, bMat, bMat];
+                const headBase = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), baseHeadMat);
+                headBase.position.set(0, 1.3, -0.2); 
+                headBase.castShadow = true; 
+                kart.add(headBase);
+
+                // 2. 전경 박스 (투명 이미지가 입혀진 오버레이 블록 - 배경 박스보다 미세하게 큼)
+                const emptyMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
+                const imgMat = new THREE.MeshBasicMaterial({ map: tex, color: 0xffffff, transparent: true, alphaTest: 0.1 });
+                const imgMatArray = [imgMat, imgMat, emptyMat, emptyMat, imgMat, imgMat]; // 상단, 하단은 비워둠
+                const headImg = new THREE.Mesh(new THREE.BoxGeometry(1.22, 1.22, 1.22), imgMatArray);
+                headImg.position.set(0, 1.3, -0.2);
+                kart.add(headImg);
 
                 const cvs = document.createElement('canvas'); cvs.width = 512; cvs.height = 128;
                 const cx = cvs.getContext('2d');
@@ -2685,8 +2953,16 @@
                     r.teamIndex = teamIndex;
                 } else {
                     r.isQualified = !r.retired && r.finalRank <= passCount;
-                    if (r.isQualified) lastRacePassedIds.add(r.member.id); 
-                    else lastRaceFailedIds.add(r.member.id);
+                    if (r.isQualified) {
+                        lastRacePassedIds.add(r.member.id); 
+                        // 기타모드이면서 서바이벌일 때 합격자를 자동으로 팀 대기열로 넘겨줌
+                        if (currentRosterMode === 'other') {
+                            const matchedMem = membersOther.find(mx => mx.id === r.member.id);
+                            if (matchedMem) matchedMem.pool = 'team';
+                        }
+                    } else {
+                        lastRaceFailedIds.add(r.member.id);
+                    }
                 }
             });
 
@@ -2754,14 +3030,18 @@
 
                     let timeHtml = (isTeamMode && (teamCount === 3 || teamCount === 4)) ? '' : `<div class="text-md ea-font text-gray-400">${r.finishTimeStr || 'DNF'}</div>`;
 
+                    const imgUrl = r.member.imgWebp || 'logo2.png';
+                    const coAttr = imgUrl.startsWith('http') ? 'crossorigin="anonymous"' : '';
+
                     const itemDiv = document.createElement('div');
                     itemDiv.className = `flex items-center gap-4 p-3 bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.05)] ${itemClasses}`;
                     if (borderLeftColor) itemDiv.style.borderLeftColor = borderLeftColor;
                     
                     itemDiv.innerHTML = `
                         <div class="w-12 text-center text-2xl ea-font-black text-white">${r.retired ? 'DNF' : rank}</div>
-                        <div class="w-12 h-12 bg-gray-800 overflow-hidden border-2 flex-shrink-0" style="border-color:${r.member.color}; border-radius: 50% !important;">
-                            <img src="${r.member.imgWebp}" crossorigin="anonymous" class="w-full h-full object-cover">
+                        <div class="w-12 h-12 bg-gray-800 overflow-hidden border-2 flex-shrink-0 relative" style="border-color:${r.member.color}; border-radius: 50% !important;">
+                            <div class="absolute inset-0" style="background: radial-gradient(circle, ${r.member.color}80 0%, #1f2937 80%); z-index: 1;"></div>
+                            <img src="${imgUrl}" ${coAttr} class="w-full h-full object-cover relative z-10" onerror="this.onerror=null; this.src='logo2.png';">
                         </div>
                         <div class="flex-1 min-w-0 flex flex-col justify-center">
                             <div class="text-xl ea-font-black uppercase truncate" style="color: ${(!isTeamMode && !r.isQualified && !r.assignedTeam) ? '#9ca3af' : 'white'}">${r.member.name}</div>
@@ -2850,14 +3130,23 @@
             document.body.style.overflow = ''; // 메인 화면 복귀 시 스크롤 허용
             ui.result.classList.add('hidden');
             ui.menu.classList.remove('hidden');
-            passCount = null; selectedMembers.clear(); updateSelectionUI();
+            passCount = null; selectedMembers.clear(); 
             
-            if(!isTeamMode && (lastRacePassedIds.size > 0 || lastRaceFailedIds.size > 0)) {
-                document.getElementById('selectPassedBtn').classList.remove('hidden');
-                document.getElementById('selectFailedBtn').classList.remove('hidden');
-            } else if (isTeamMode) {
-                document.getElementById('selectPassedBtn').classList.add('hidden');
-                document.getElementById('selectFailedBtn').classList.add('hidden');
+            // 기타모드인 경우 합격자의 카테고리(pool) 변동이 있었으므로 Grid 전체 다시 그리기
+            if (currentRosterMode === 'other') {
+                createMemberGrid();
+            }
+            
+            updateSelectionUI();
+            
+            if (currentRosterMode === 'chunta') {
+                if(!isTeamMode && (lastRacePassedIds.size > 0 || lastRaceFailedIds.size > 0)) {
+                    document.getElementById('selectPassedBtn').classList.remove('hidden');
+                    document.getElementById('selectFailedBtn').classList.remove('hidden');
+                } else if (isTeamMode) {
+                    document.getElementById('selectPassedBtn').classList.add('hidden');
+                    document.getElementById('selectFailedBtn').classList.add('hidden');
+                }
             }
         }
 
