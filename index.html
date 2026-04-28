@@ -522,7 +522,7 @@
             { id: 102, name: '뢴트게늄', imgWebp: 'guest/roen.webp', imgJpg: 'guest/roen.webp', color: '#e5446e' },
             { id: 103, name: '카나시', imgWebp: 'guest/kanasi.png', imgJpg: 'guest/kanasi.png', color: '#ffd4c2' },
             { id: 104, name: '최또', imgWebp: 'guest/choiddo.png', imgJpg: 'guest/choiddo.png', color: '#f1c1c3' },
-            { id: 105, name: '나리', imgWebp: 'guest/nari.png', imgJpg: 'guest/nari.png', color: '#1c1c1c' },
+            { id: 105, name: '나리', imgWebp: 'guest/nari.png', imgJpg: 'guest/nari.png', color: '#ffffff' },
             { id: 106, name: '돗챠', imgWebp: 'guest/dotcha.png', imgJpg: 'guest/dotcha.png', color: '#f788be' }
             
         ];
@@ -2728,12 +2728,32 @@
                         tPos.copy(midPos).add(cn.multiplyScalar(camSide * camDist)).add(new THREE.Vector3(0, camHeight, 0)); 
                         lPos.copy(midPos);
                     } else {
+                        // 변경: 타겟 차량의 실제 위치를 중심으로 카메라 위치/조준 설정
+                        let targetLaneOffset = window._currentFocusTarget ? window._currentFocusTarget.laneOffset : 0;
+                        let targetActualPos = cp.clone().add(cn.clone().multiplyScalar(targetLaneOffset));
+                        let sideDir = targetLaneOffset >= 0 ? -1 : 1; // 차량의 반대쪽(트랙 중앙 쪽)에서 비추도록
+                        
                         switch(cameraMode) {
-                            case 'overview': tPos.copy(cp).sub(ct.clone().multiplyScalar(70 * zoomFactor)).add(new THREE.Vector3(0, 50 * zoomFactor, 0)); lPos.copy(cp).add(ct.clone().multiplyScalar(10)); break;
-                            case 'side': tPos.copy(cp).add(ct.clone().multiplyScalar(10)).add(cn.clone().multiplyScalar(60 * zoomFactor)).add(new THREE.Vector3(0, 25 * zoomFactor, 0)); lPos.copy(cp).add(ct.clone().multiplyScalar(10)); break;
-                            case 'front': tPos.copy(cp).add(ct.clone().multiplyScalar(60 * zoomFactor)).add(new THREE.Vector3(0, 20 * zoomFactor, 0)); lPos.copy(cp); break;
-                            case 'follow': tPos.copy(cp).sub(ct.clone().multiplyScalar(35 * zoomFactor)).add(new THREE.Vector3(0, 15 * zoomFactor, 0)); lPos.copy(cp).add(ct.clone().multiplyScalar(15)); break;
-                            default: tPos.copy(cp).sub(ct.clone().multiplyScalar(70 * zoomFactor)).add(new THREE.Vector3(0, 50 * zoomFactor, 0)); lPos.copy(cp).add(ct.clone().multiplyScalar(10)); break;
+                            case 'overview': 
+                                tPos.copy(cp).sub(ct.clone().multiplyScalar(70 * zoomFactor)).add(new THREE.Vector3(0, 50 * zoomFactor, 0)); 
+                                lPos.copy(cp).add(ct.clone().multiplyScalar(10)); 
+                                break;
+                            case 'side': 
+                                tPos.copy(targetActualPos).add(ct.clone().multiplyScalar(10)).add(cn.clone().multiplyScalar(sideDir * 35 * zoomFactor)).add(new THREE.Vector3(0, 15 * zoomFactor, 0)); 
+                                lPos.copy(targetActualPos); 
+                                break;
+                            case 'front': 
+                                tPos.copy(targetActualPos).add(ct.clone().multiplyScalar(50 * zoomFactor)).add(new THREE.Vector3(0, 15 * zoomFactor, 0)); 
+                                lPos.copy(targetActualPos); 
+                                break;
+                            case 'follow': 
+                                tPos.copy(targetActualPos).sub(ct.clone().multiplyScalar(35 * zoomFactor)).add(new THREE.Vector3(0, 15 * zoomFactor, 0)); 
+                                lPos.copy(targetActualPos).add(ct.clone().multiplyScalar(10)); 
+                                break;
+                            default: 
+                                tPos.copy(cp).sub(ct.clone().multiplyScalar(70 * zoomFactor)).add(new THREE.Vector3(0, 50 * zoomFactor, 0)); 
+                                lPos.copy(cp).add(ct.clone().multiplyScalar(10)); 
+                                break;
                         }
                     }
                 }
