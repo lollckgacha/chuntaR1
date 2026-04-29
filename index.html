@@ -522,7 +522,7 @@
             { id: 102, name: '뢴트게늄', imgWebp: 'guest/roen.webp', imgJpg: 'guest/roen.webp', color: '#e5446e' },
             { id: 103, name: '카나시', imgWebp: 'guest/kanasi.png', imgJpg: 'guest/kanasi.png', color: '#ffd4c2' },
             { id: 104, name: '최또', imgWebp: 'guest/choiddo.png', imgJpg: 'guest/choiddo.png', color: '#f1c1c3' },
-            { id: 105, name: '나리', imgWebp: 'guest/nari.png', imgJpg: 'guest/nari.png', color: '#ffffff' },
+            { id: 105, name: '나리', imgWebp: 'guest/nari.png', imgJpg: 'guest/nari.png', color: '#1c1c1c' },
             { id: 106, name: '돗챠', imgWebp: 'guest/dotcha.png', imgJpg: 'guest/dotcha.png', color: '#f788be' }
             
         ];
@@ -530,6 +530,8 @@
         // ▼ 실제 레이스에 표시할 기타 멤버 선택 ▼
         // 1. '멤버 뽑기' 대기열에 기본으로 들어갈 멤버
         const ACTIVE_SURVIVAL_MEMBERS = [
+            '돗챠',
+            '카푸'
         ];
 
         // 2. '팀 나누기' 대기열에 미리 넘어가 있을 멤버
@@ -544,8 +546,7 @@
             '파니',
             '카나시',
             '최또',
-            '나리',
-            '카푸'
+            '나리'
             
         ];
 
@@ -783,7 +784,9 @@
 
         // --- Intro Video Logic ---
         function playIntro() {
-            document.getElementById('introPromptOverlay').classList.add('hidden');
+            const promptOverlay = document.getElementById('introPromptOverlay');
+            if (promptOverlay) promptOverlay.classList.add('hidden');
+
             const vidOverlay = document.getElementById('videoOverlay');
             const vid = document.getElementById('introVideo');
             vidOverlay.classList.remove('hidden');
@@ -801,7 +804,8 @@
         }
 
         function skipIntroPrompt() {
-            document.getElementById('introPromptOverlay').classList.add('hidden');
+            const promptOverlay = document.getElementById('introPromptOverlay');
+            if (promptOverlay) promptOverlay.classList.add('hidden');
             showMainMenu();
         }
 
