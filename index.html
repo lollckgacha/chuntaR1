@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>천타버스 그랑프리</title>
+    <title>천타버스 랜덤 달리기 & 그랑프리</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:ital,wght@0,400;0,700;0,900;1,900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
@@ -199,8 +199,30 @@
 </head>
 <body class="radio-pos-left">
 
-    <!-- Loading -->
-    <div id="loadingOverlay" class="loading-overlay">
+    <!-- 1. Intro Mode Selection -->
+    <div id="introScreen" class="fixed inset-0 bg-[#0a0a0f] flex items-center justify-center z-[500]">
+        <div class="menu-bg"></div>
+        <div class="flex flex-col items-center gap-12 z-10 relative w-full px-4">
+            <h1 class="text-5xl md:text-7xl text-white ea-font-black drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] text-center">천타버스 <span class="text-[#acfef8]">랜덤 달리기 & 그랑프리</span></h1>
+            
+            <div class="flex flex-col md:flex-row gap-8 w-full max-w-4xl justify-center">
+                <!-- CRD Button -->
+                <button onclick="gotoCRD()" class="ea-panel p-8 flex-1 hover:scale-105 transition-transform cursor-pointer group border border-[rgba(255,255,255,0.2)] hover:border-[#acfef8]">
+                    <img src="https://raw.githubusercontent.com/Cren0p/CRD/refs/heads/main/CRD.webp" class="h-32 object-contain mx-auto mb-6 group-hover:brightness-125 transition-all">
+                    <h2 class="text-3xl ea-font-black text-white text-center">천타버스 랜덤 달리기</h2>
+                </button>
+                
+                <!-- CF1 Button -->
+                <button onclick="startCF1Mode()" class="ea-panel p-8 flex-1 hover:scale-105 transition-transform cursor-pointer group border border-[rgba(255,255,255,0.2)] hover:border-[#00d2ff]">
+                    <img src="logo2.png" class="h-32 object-contain mx-auto mb-6 opacity-80 group-hover:opacity-100 group-hover:brightness-125 transition-all" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/Cren0p/CRD/refs/heads/main/CRD.webp';">
+                    <h2 class="text-3xl ea-font-black text-white text-center">천타버스 그랑프리</h2>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading (초기 화면에서 가려둠) -->
+    <div id="loadingOverlay" class="loading-overlay hidden" style="display: none;">
         <div class="text-center">
             <div class="spinner mx-auto mb-8"></div>
             <p class="text-white text-3xl ea-font tracking-widest text-gray-400">리소스 로딩 중 <span id="loadProgress" class="text-white ml-2">0/12</span></p>
@@ -240,14 +262,15 @@
         <div class="menu-bg"></div>
         <header class="w-full pt-8 pb-4 px-12 flex justify-between items-end border-b border-[rgba(255,255,255,0.1)]">
             <div class="flex items-center gap-6">
-                <img src="logo2.png" alt="R1 Logo" class="h-12 object-contain filter brightness-0 invert opacity-80">
+                <img src="logo2.png" alt="R1 Logo" class="h-12 object-contain filter brightness-0 invert opacity-80" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/Cren0p/CRD/refs/heads/main/CRD.webp';">
                 <h1 class="text-4xl text-white ea-font-black m-0 leading-none">천타버스 <span class="text-[#acfef8]">그랑프리™</span></h1>
             </div>
             <div class="hidden lg:flex gap-8 text-gray-400 ea-font text-xl">
-                <!-- 변경됨: 탭 스위칭 기능 추가 -->
                 <span id="navChunta" class="text-[#acfef8] border-b-2 border-[#acfef8] pb-1 cursor-pointer transition-colors" onclick="switchRoster('chunta')">천타버스</span>
                 <span id="navOther" class="hover:text-white cursor-pointer transition-colors" onclick="switchRoster('other')">기타 컨텐츠</span>
                 <span class="hover:text-white cursor-pointer transition-colors" onclick="openSettings()">환경설정</span>
+                <!-- 뒤로가기(새로고침) 버튼 추가 -->
+                <span class="hover:text-white cursor-pointer transition-colors" onclick="location.reload()">처음으로 돌아가기</span>
             </div>
         </header>
 
@@ -482,7 +505,7 @@
                     <div class="text-[#acfef8] ea-font text-xl mb-1">공식 기록 (OFFICIAL DOCUMENT)</div>
                     <h2 class="text-5xl text-white ea-font-black m-0">최종 레이스 결과</h2>
                 </div>
-                <img src="logo2.png" crossorigin="anonymous" class="h-10 filter brightness-0 invert opacity-50 hidden sm:block">
+                <img src="logo2.png" crossorigin="anonymous" class="h-10 filter brightness-0 invert opacity-50 hidden sm:block" onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/Cren0p/CRD/refs/heads/main/CRD.webp';">
             </div>
 
             <!-- Header Labels are now dynamically generated in JS -->
@@ -683,6 +706,16 @@
             gridIntroOverlay: document.getElementById('gridIntroOverlay'),
             skipIntroBtn: document.getElementById('skipIntroBtnContainer')
         };
+
+        // --- NEW: App entry and routing ---
+        function gotoCRD() {
+            window.location.href = 'https://lollckgacha.github.io/NEWCRD/';
+        }
+
+        function startCF1Mode() {
+            document.getElementById('introScreen').classList.add('hidden');
+            init(); // Start loading and initialize CF1
+        }
 
         function init() {
             renderPassButtons();
@@ -961,6 +994,7 @@
             }
 
             document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('loadingOverlay').classList.remove('hidden');
             document.getElementById('loadProgress').textContent = `0/${members.length}`;
 
             members.forEach(m => {
@@ -1004,6 +1038,7 @@
             function onAllLoaded() {
                 allImagesLoaded = true; 
                 document.getElementById('loadingOverlay').style.display = 'none'; 
+                document.getElementById('loadingOverlay').classList.add('hidden');
                 createMemberGrid();
                 updateSelectionUI();
                 
@@ -3172,7 +3207,8 @@
             }
         }
 
-        init();
+        // --- Remove the standalone init() call at the bottom ---
+        // init(); // Now handled by startCF1Mode()
 
     </script>
 </body>
