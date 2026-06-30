@@ -521,19 +521,21 @@
     </div>
 
     <script>
-        const baseUrl = 'https://raw.githubusercontent.com/Cren0p/CRD/refs/heads/main/';
+        const baseUrl = './';
         
         let membersChuntaverse = [
-            { id: 1, name: '천양', imgWebp: baseUrl + '01.webp', imgJpg: baseUrl + '01.jpg', color: '#43EAF6' },
-            { id: 2, name: '마다옴', imgWebp: baseUrl + '02.webp', imgJpg: baseUrl + '02.jpg', color: '#FFF5C3' },
-            { id: 3, name: '나나문', imgWebp: baseUrl + '03.webp', imgJpg: baseUrl + '03.jpg', color: '#F4F6FF' },
-            { id: 4, name: '임하밍', imgWebp: baseUrl + '04.webp', imgJpg: baseUrl + '04.jpg', color: '#F8DBFF' },
-            { id: 5, name: '문모모', imgWebp: baseUrl + '05.webp', imgJpg: baseUrl + '05.jpg', color: '#A868FB' },
-            { id: 7, name: '카푸', imgWebp: baseUrl + '07.webp', imgJpg: baseUrl + '07.jpg', color: '#FFCFB7' },
-            { id: 8, name: '캬앙', imgWebp: baseUrl + '08.webp', imgJpg: baseUrl + '08.jpg', color: '#FF5A4D' },
-            { id: 9, name: '김웰로', imgWebp: baseUrl + '09.webp', imgJpg: baseUrl + '09.jpg', color: '#BFEF90' },
-            { id: 10, name: '모카', imgWebp: baseUrl + '10.webp', imgJpg: baseUrl + '10.jpg', color: '#5E8EFF' },
-            { id: 11, name: '달타', imgWebp: baseUrl + '11.webp', imgJpg: baseUrl + '11.jpg', color: '#FFC462' }
+            { id: 1, name: '천양', imgWebp: '01.webp', imgJpg: '01.jpg', color: '#43EAF6' },
+            { id: 2, name: '마다옴', imgWebp: '02.webp', imgJpg: '02.jpg', color: '#FFF5C3' },
+            { id: 3, name: '나나문', imgWebp: '03.webp', imgJpg: '03.jpg', color: '#F4F6FF' },
+            { id: 4, name: '임하밍', imgWebp: '04.webp', imgJpg: '04.jpg', color: '#F8DBFF' },
+            { id: 5, name: '문모모', imgWebp: '05.webp', imgJpg: '05.jpg', color: '#A868FB' },
+            { id: 6, name: '체비', imgWebp: '06.webp', imgJpg: '06.jpg', color: '#d8d6dc' },
+            { id: 7, name: '카푸', imgWebp: '07.webp', imgJpg: '07.jpg', color: '#FFCFB7' },
+            { id: 8, name: '캬앙', imgWebp: '08.webp', imgJpg: '08.jpg', color: '#FF5A4D' },
+            { id: 9, name: '김웰로', imgWebp: '09.webp', imgJpg: '09.jpg', color: '#BFEF90' },
+            { id: 10, name: '모카', imgWebp: '10.webp', imgJpg: '10.jpg', color: '#5E8EFF' },
+            { id: 11, name: '달타', imgWebp: '11.webp', imgJpg: '11.jpg', color: '#FFC462' },
+            { id: 12, name: '플리', imgWebp: '12.webp', imgJpg: '12.jpg', color: '#b8e1f5' }
         ];
 
         // ============================================================================
@@ -985,30 +987,36 @@
                     if (loaded === members.length) onAllLoaded();
                 } else {
                     const fallbackImg = 'logo2.png';
-                    let targetImg = m.imgJpg || fallbackImg;
-                    const isExternal = targetImg.startsWith('http');
-                    const tempLoader = new THREE.TextureLoader();
-                    if (isExternal) tempLoader.setCrossOrigin('anonymous');
-                    
-                    tempLoader.load(targetImg, (tex) => {
-                        tex.magFilter = THREE.LinearFilter; 
-                        tex.minFilter = THREE.LinearMipmapLinearFilter; 
-                        tex.anisotropy = maxAnisotropy; 
+                    let targetImg = m.imgWebp || m.imgJpg || fallbackImg;
+
+                    function makeTexFromImg(src, onSuccess, onFail) {
+                        const img = new Image();
+                        if (src.startsWith('http')) img.crossOrigin = 'anonymous';
+                        img.onload = () => {
+                            const cvs = document.createElement('canvas');
+                            cvs.width = img.naturalWidth || 256;
+                            cvs.height = img.naturalHeight || 256;
+                            cvs.getContext('2d').drawImage(img, 0, 0);
+                            const tex = new THREE.CanvasTexture(cvs);
+                            tex.magFilter = THREE.LinearFilter;
+                            tex.minFilter = THREE.LinearMipmapLinearFilter;
+                            tex.anisotropy = maxAnisotropy;
+                            onSuccess(tex);
+                        };
+                        img.onerror = onFail;
+                        img.src = src;
+                    }
+
+                    makeTexFromImg(targetImg, (tex) => {
                         preloadedTextures[m.id] = tex;
                         loaded++; document.getElementById('loadProgress').textContent = `${loaded}/${members.length}`;
                         if (loaded === members.length) onAllLoaded();
-                    }, undefined, () => {
-                        // 이미지 로드 실패 시 logo2.png 대체 시도
-                        const fbLoader = new THREE.TextureLoader();
-                        fbLoader.load(fallbackImg, (fbTex) => {
-                            fbTex.magFilter = THREE.LinearFilter; 
-                            fbTex.minFilter = THREE.LinearMipmapLinearFilter; 
-                            fbTex.anisotropy = maxAnisotropy; 
+                    }, () => {
+                        makeTexFromImg(fallbackImg, (fbTex) => {
                             preloadedTextures[m.id] = fbTex;
                             loaded++; document.getElementById('loadProgress').textContent = `${loaded}/${members.length}`;
                             if (loaded === members.length) onAllLoaded();
-                        }, undefined, () => {
-                            // 대체 이미지마저 실패했을 경우 진행을 위해 강제 패스
+                        }, () => {
                             loaded++; document.getElementById('loadProgress').textContent = `${loaded}/${members.length}`;
                             if (loaded === members.length) onAllLoaded();
                         });
