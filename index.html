@@ -2615,7 +2615,7 @@
                 // MAX 이벤트 (확률 33%)
                 if (leaderLap === selectedLaps && lapProgress > 0.80 && !maxEventTriggered) {
                     maxEventTriggered = true;
-                    if (activeRacing.length >= 2 && Math.random() < 0.33) {
+                    if (activeRacing.length >= 2 && Math.random() < 1.0) {
                         const lastPlace = activeRacing[activeRacing.length - 1];
                         lastPlace.state = 'max_boost';
                         lastPlace.maxBoostTimer = 12.0; 
